@@ -1,0 +1,105 @@
+#pragma once
+
+#include <doca_comch_producer.h>
+#include <doca_comch.h>
+#include <doca_ctx.h>
+#include <doca_dev.h>
+#include <doca_pe.h>
+#include <doca_types.h>
+#include <fmt/core.h>
+#include <functional>
+
+struct Server {
+    using CustomSendCb = std::function<void()>;
+    using CustomRecvCb =
+        std::function<void(uint8_t *, uint32_t, doca_comch_connection *)>;
+    using CustomConnCb = std::function<void(doca_comch_connection *)>;
+    using CustomConsumerCb =
+        std::function<void(doca_comch_connection *, uint32_t)>;
+
+    struct Cfg {
+        // size_t max_msg_size{};
+        // size_t max_recv_queue_size{};
+    };
+
+    doca_dev *dev{};
+    doca_dev_rep *dev_rep{};
+    doca_pe *pe{};
+    doca_comch_server *inner{};
+    doca_ctx *ctx{};
+
+    Server(
+        std::string_view name,
+        std::string_view dev_pci,
+        std::string_view dev_rep_pci /*, const Cfg &cfg*/);
+    ~Server();
+
+    CustomSendCb custom_send_cb{[] {
+    }};
+    CustomSendCb custom_send_error_cb{[] {
+        throw std::runtime_error("client send error.");
+    }};
+    CustomRecvCb custom_recv_cb{
+        [](uint8_t *, uint32_t, doca_comch_connection *) {
+        }};
+    CustomConnCb custom_new_conn_cb{[](doca_comch_connection *) {
+    }};
+    CustomConnCb custom_disconn_cb{[](doca_comch_connection *) {
+        throw std::runtime_error("peer is disconnected");
+    }};
+    CustomConsumerCb custom_new_consumer_cb{
+        [](doca_comch_connection *, uint32_t) {
+        }};
+    CustomConsumerCb custom_expired_consumer_cb{
+        [](doca_comch_connection *, uint32_t id) {
+            throw std::runtime_error(
+                fmt::format("consumer with ID=[{}] is expired.", id));
+        }};
+
+    void set_custom_send_cb(CustomSendCb cb) { custom_send_cb = cb; }
+    void set_custom_send_error_cb(CustomSendCb cb) {
+        custom_send_error_cb = cb;
+    }
+    void set_custom_recv_cb(CustomRecvCb cb) { custom_recv_cb = cb; }
+    void set_custom_new_conn_cb(CustomConnCb cb) { custom_new_conn_cb = cb; }
+    void set_custom_disconn_cb(CustomConnCb cb) { custom_disconn_cb = cb; }
+    void set_custom_new_consumer_cb(CustomConsumerCb cb) {
+        custom_new_consumer_cb = cb;
+    }
+    void set_custom_expired_consumer_cb(CustomConsumerCb cb) {
+        custom_expired_consumer_cb = cb;
+    }
+
+    static void send_cb(
+        doca_comch_task_send *task,
+        doca_data task_user_data,
+        doca_data ctx_user_data);
+    static void send_error_cb(
+        doca_comch_task_send *task,
+        doca_data task_user_data,
+        doca_data ctx_user_data);
+    static void recv_cb(
+        doca_comch_event_msg_recv *,
+        uint8_t *recv_buffer,
+        uint32_t msg_len,
+        struct doca_comch_connection *comch_connection);
+    static void new_conn_cb(
+        doca_comch_event_connection_status_changed *event,
+        doca_comch_connection *comch_connection,
+        uint8_t change_success);
+    static void disconn_cb(
+        doca_comch_event_connection_status_changed *event,
+        doca_comch_connection *comch_connection,
+        uint8_t change_success);
+    static void new_consumer_cb(
+        doca_comch_event_consumer *event,
+        doca_comch_connection *comch_connection,
+        uint32_t id);
+    static void expired_consumer_cb(
+        doca_comch_event_consumer *event,
+        doca_comch_connection *comch_connection,
+        uint32_t id);
+
+  private:
+    static Server *from_conn_to_server(doca_comch_connection *comch_connection);
+};
