@@ -5,22 +5,23 @@
 #include <doca_error.h>
 #include <iostream>
 
+namespace docacxx {
 Server::Server(
     std::string_view name,
     std::string_view dev_pci,
-    std::string_view dev_rep_pci /*, const Cfg &cfg_ */) {
+    std::string_view dev_rep_pci,
+    doca_pe *pe, const Cfg &cfg) {
     check_derr(
         open_doca_device_with_pci(dev_pci.data(), &dev), "failed to open dev");
     check_derr(
         open_doca_device_rep_with_pci(
             dev, DOCA_DEVINFO_REP_FILTER_NET, dev_rep_pci.data(), &dev_rep),
         "failed to open rep");
-    check_derr(doca_pe_create(&pe), "failed to create pe");
+
     check_derr(
         doca_comch_server_create(dev, dev_rep, name.data(), &inner),
         "failed to create server");
-    ctx = doca_comch_server_as_ctx(inner);
-    check_derr(doca_pe_connect_ctx(pe, ctx), "failed to connect to ctx");
+    init_ctx(doca_comch_server_as_ctx(inner), pe);
 
     check_derr(
         doca_comch_server_event_connection_register(
@@ -31,50 +32,24 @@ Server::Server(
             inner, new_consumer_cb, expired_consumer_cb),
         "failed to register consumer event");
 
-    doca_comch_server_task_send_set_conf(inner, send_cb, send_error_cb, 1024);
-    doca_comch_server_event_msg_recv_register(inner, recv_cb);
+    check_derr(doca_comch_server_task_send_set_conf(inner, send_cb, send_error_cb, cfg.max_send_task_num),
+        "failed to set send task conf");
+    check_derr(doca_comch_server_event_msg_recv_register(inner, recv_cb),
+        "failed to register recv msg event");
 
     // check_derr(doca_comch_server_set_max_msg_size(inner, cfg.max_msg_size),
     // "failed to set max msg size");
     // check_derr(doca_comch_server_set_recv_queue_size(inner,
     // cfg.max_recv_queue_size),
     //     "failed to set max queue size");
-
-    doca_data ctx_user_data{};
-    ctx_user_data.ptr = this;
-    check_derr(
-        doca_ctx_set_user_data(ctx, ctx_user_data),
-        "failed to set user data of ctx");
-
-    check_derr(doca_ctx_start(ctx), "failed to start ctx");
 }
 
-Server::~Server() {
-    doca_error result{};
-
-    result = doca_ctx_stop(ctx);
-    if (result != DOCA_SUCCESS) {
-        if (result == DOCA_ERROR_IN_PROGRESS) {
-            doca_ctx_states state{};
-            do {
-                doca_pe_progress(pe);
-                doca_ctx_get_state(ctx, &state);
-            } while (state != DOCA_CTX_STATE_IDLE);
-        } else {
-            std::cerr << "Failed to stop server ctx with error = "
-                      << doca_error_get_name(result) << std::endl;
-        }
-    }
-
-    result = doca_comch_server_destroy(inner);
+void Server::clean_impl() {
+    auto result = doca_comch_server_destroy(inner);
     if (result != DOCA_SUCCESS) {
         std::cerr << "Failed to destroy server properly with error = "
                   << doca_error_get_name(result) << std::endl;
     }
-    result = doca_pe_destroy(pe);
-    if (result != DOCA_SUCCESS)
-        std::cerr << "Failed to destroy pe properly with error = "
-                  << doca_error_get_name(result) << std::endl;
     result = doca_dev_close(dev);
     if (result != DOCA_SUCCESS)
         std::cerr << "Failed to close dev properly with error = "
@@ -150,4 +125,5 @@ void Server::expired_consumer_cb(
     uint32_t id) {
     auto *server = from_conn_to_server(comch_connection);
     server->custom_expired_consumer_cb(comch_connection, id);
+}
 }

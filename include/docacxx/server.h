@@ -9,7 +9,11 @@
 #include <fmt/core.h>
 #include <functional>
 
-struct Server {
+#include "context.h"
+
+namespace docacxx {
+class Server: public ContextBase {
+public:
     using CustomSendCb = std::function<void()>;
     using CustomRecvCb =
         std::function<void(uint8_t *, uint32_t, doca_comch_connection *)>;
@@ -18,21 +22,19 @@ struct Server {
         std::function<void(doca_comch_connection *, uint32_t)>;
 
     struct Cfg {
+        size_t max_send_task_num{};
         // size_t max_msg_size{};
         // size_t max_recv_queue_size{};
     };
 
     doca_dev *dev{};
     doca_dev_rep *dev_rep{};
-    doca_pe *pe{};
     doca_comch_server *inner{};
-    doca_ctx *ctx{};
 
     Server(
         std::string_view name,
         std::string_view dev_pci,
-        std::string_view dev_rep_pci /*, const Cfg &cfg*/);
-    ~Server();
+        std::string_view dev_rep_pci, doca_pe *pe, const Cfg &cfg);
 
     CustomSendCb custom_send_cb{[] {
     }};
@@ -56,20 +58,10 @@ struct Server {
                 fmt::format("consumer with ID=[{}] is expired.", id));
         }};
 
-    void set_custom_send_cb(CustomSendCb cb) { custom_send_cb = cb; }
-    void set_custom_send_error_cb(CustomSendCb cb) {
-        custom_send_error_cb = cb;
-    }
-    void set_custom_recv_cb(CustomRecvCb cb) { custom_recv_cb = cb; }
-    void set_custom_new_conn_cb(CustomConnCb cb) { custom_new_conn_cb = cb; }
-    void set_custom_disconn_cb(CustomConnCb cb) { custom_disconn_cb = cb; }
-    void set_custom_new_consumer_cb(CustomConsumerCb cb) {
-        custom_new_consumer_cb = cb;
-    }
-    void set_custom_expired_consumer_cb(CustomConsumerCb cb) {
-        custom_expired_consumer_cb = cb;
-    }
+protected:
+    void clean_impl() override;
 
+private:
     static void send_cb(
         doca_comch_task_send *task,
         doca_data task_user_data,
@@ -100,6 +92,6 @@ struct Server {
         doca_comch_connection *comch_connection,
         uint32_t id);
 
-  private:
     static Server *from_conn_to_server(doca_comch_connection *comch_connection);
 };
+}

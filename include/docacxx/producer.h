@@ -6,43 +6,41 @@
 #include <doca_mmap.h>
 #include <functional>
 
-#include "doca_utils.h"
+#include "context.h"
 
-struct Producer {
+namespace docacxx {
+class Producer: public ContextBase {
+public:
     using CustomSendCb = std::function<void()>;
 
     struct Cfg {
-        size_t total_buf_size{};
+        size_t send_task_num{};
     };
     struct Cap {
-        uint32_t max_tasks_num{};
+        uint32_t max_send_task_num{};
         uint32_t max_buf_len{};
     };
 
-    Producer(doca_comch_connection *peer_conn, doca_dev *dev, const Cfg &cfg);
-    ~Producer();
-
-    bool is_sended{};
-    void send_block(std::string_view data, size_t remote_consumer_id);
-
-    doca_pe *pe{};
-    doca_ctx *ctx{};
+    Producer(doca_comch_connection *peer_conn, doca_pe *pe,
+        doca_dev *dev, const Cfg &cfg);
+    ~Producer() = default;
 
     Cap cap{};
     doca_comch_producer *inner{};
-    SingleLocalDocaMem local_mem;
 
     CustomSendCb custom_send_cb{[] {
     }};
     CustomSendCb custom_send_error_cb{[] {
-        // throw std::runtime_error("producer send error");
+        throw std::runtime_error("producer send error");
     }};
+    
+    doca_task *alloc_send_task(const doca_buf *buf, uint8_t *imm_data,
+		uint32_t imm_data_len, uint32_t consumer_id);
 
-    void set_custom_send_cb(CustomSendCb cb) { custom_send_cb = cb; }
-    void set_custom_send_error_cb(CustomSendCb cb) {
-        custom_send_error_cb = cb;
-    }
+protected:
+    void clean_impl() override;
 
+private:
     static void send_cb(
         doca_comch_producer_task_send *task,
         doca_data task_user_data,
@@ -52,3 +50,4 @@ struct Producer {
         doca_data task_user_data,
         doca_data ctx_user_data);
 };
+}

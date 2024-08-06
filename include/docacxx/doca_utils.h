@@ -10,10 +10,9 @@
 #include <doca_dev.h>
 #include <doca_mmap.h>
 #include <fmt/core.h>
-#include <iostream>
 #include <stdexcept>
-#include <vector>
 
+namespace docacxx {
 template<class... Args>
 static inline void throw_with(std::string_view format, Args... args) {
     throw std::runtime_error(fmt::format(fmt::runtime(format), args...));
@@ -92,80 +91,4 @@ static inline doca_error_t open_doca_device_rep_with_pci(
     doca_devinfo_rep_destroy_list(rep_dev_list);
     return DOCA_ERROR_NOT_FOUND;
 }
-
-// single buf
-struct SingleLocalDocaMem {
-    std::vector<char> mem;
-    doca_buf *buf{};
-    doca_mmap *mmap{};
-    doca_buf_inventory *buf_inv{};
-
-    SingleLocalDocaMem(doca_dev *dev, size_t total_mem_size) {
-        mem.resize(total_mem_size);
-        check_derr(
-            doca_buf_inventory_create(1, &buf_inv), "failed to create buf inv");
-
-        check_derr(
-            doca_buf_inventory_start(buf_inv), "failed to start buf inv");
-        check_derr(doca_mmap_create(&mmap), "failed to create mmap");
-        check_derr(doca_mmap_add_dev(mmap, dev), "failed to add dev to mmap");
-        check_derr(
-            doca_mmap_set_permissions(mmap, DOCA_ACCESS_FLAG_PCI_READ_WRITE),
-            "failed to set permissions of mmap");
-        check_derr(
-            doca_mmap_set_memrange(mmap, mem.data(), total_mem_size),
-            "failed set memrange of mmap");
-        check_derr(doca_mmap_start(mmap), "failed to start mmap");
-        check_derr(
-            doca_buf_inventory_buf_get_by_addr(
-                buf_inv, mmap, mem.data(), mem.size(), &buf),
-            "failed to get doca buf");
-    }
-
-    ~SingleLocalDocaMem() {
-        doca_error_t result{};
-
-        result = doca_buf_dec_refcount(buf, nullptr);
-        if (result != DOCA_SUCCESS) {
-            std::cerr << "Failed to dec refcount of buf: "
-                      << doca_error_get_descr(result) << std::endl;
-            return;
-        }
-
-        result = doca_mmap_destroy(mmap);
-        if (result != DOCA_SUCCESS) {
-            std::cerr << "Failed to destroy mmap: "
-                      << doca_error_get_descr(result) << std::endl;
-            return;
-        }
-
-        result = doca_buf_inventory_destroy(buf_inv);
-        if (result != DOCA_SUCCESS) {
-            std::cerr << "Failed to destroy inventory: "
-                      << doca_error_get_descr(result) << std::endl;
-            return;
-        }
-    }
-
-    void set_data(std::string_view src) {
-        std::memcpy(mem.data(), src.data(), src.length());
-        check_derr(
-            doca_buf_set_data(buf, mem.data(), src.length()),
-            "failed to set data of buf");
-    }
-
-    std::string_view get_data() {
-        void *data{};
-        size_t len{};
-        check_derr(doca_buf_get_data(buf, &data), "failed to get data of buf");
-        check_derr(
-            doca_buf_get_data_len(buf, &len), "failed to get data len of buf");
-        return {(char *)data, len};
-    }
-
-    void clear_data() {
-        check_derr(
-            doca_buf_set_data(buf, mem.data(), 0),
-            "failed to clear data of buf");
-    }
-};
+}
