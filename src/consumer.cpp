@@ -43,18 +43,18 @@ void Consumer::recv_cb(
     doca_comch_consumer_task_post_recv *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
+    doca_task_free(doca_comch_consumer_task_post_recv_as_task(task));
     auto *consumer = (Consumer *)ctx_user_data.ptr;
     consumer->custom_recv_cb();
-    doca_task_free(doca_comch_consumer_task_post_recv_as_task(task));
 }
 
 void Consumer::recv_error_cb(
     doca_comch_consumer_task_post_recv *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
+    doca_task_free(doca_comch_consumer_task_post_recv_as_task(task));
     auto *consumer = (Consumer *)ctx_user_data.ptr;
     consumer->custom_recv_error_cb();
-    doca_task_free(doca_comch_consumer_task_post_recv_as_task(task));
 }
 
 doca_task *Consumer::alloc_recv_task(doca_buf *buf) {

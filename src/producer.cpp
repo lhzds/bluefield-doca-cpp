@@ -52,17 +52,17 @@ void Producer::send_cb(
     doca_comch_producer_task_send *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
+    doca_task_free(doca_comch_producer_task_send_as_task(task));
     auto *producer = (Producer *)ctx_user_data.ptr;
     producer->custom_send_cb();
-    doca_task_free(doca_comch_producer_task_send_as_task(task));
 }
 
 void Producer::send_error_cb(
     doca_comch_producer_task_send *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
+    doca_task_free(doca_comch_producer_task_send_as_task(task));
     auto *producer = (Producer *)ctx_user_data.ptr;
     producer->custom_send_error_cb();
-    doca_task_free(doca_comch_producer_task_send_as_task(task));
 }
 }

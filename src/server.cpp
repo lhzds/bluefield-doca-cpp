@@ -74,6 +74,7 @@ void Server::send_cb(
     doca_comch_task_send *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
+    doca_task_free(doca_comch_task_send_as_task(task));
     auto *server = (Server *)ctx_user_data.ptr;
     server->custom_send_error_cb();
 }
@@ -82,6 +83,7 @@ void Server::send_error_cb(
     doca_comch_task_send *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
+    doca_task_free(doca_comch_task_send_as_task(task));
     auto *server = (Server *)ctx_user_data.ptr;
     server->custom_send_error_cb();
 }

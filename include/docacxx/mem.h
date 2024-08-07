@@ -9,14 +9,17 @@
 namespace docacxx {
 class Buffer {
 public:
-    doca_buf *buf;
-    char *mem;
+    doca_buf *buf{};
+    char *mem{};
     const size_t len{};
 
     Buffer(doca_buf *buffer, char *memory, size_t length)
         :buf{buffer}, mem{memory}, len{length} {}
 
     ~Buffer() {
+        if (not buf) {
+            return;
+        }
         auto result = doca_buf_dec_refcount(buf, nullptr);
         if (result != DOCA_SUCCESS) {
             std::cerr << "Failed to dec refcount of buf: "
@@ -71,7 +74,7 @@ public:
     }
 
     BufInventory(doca_dev *dev, size_t length, size_t max_bufs):
-        BufInventory(dev, new char[length], length, max_bufs)  {
+        BufInventory(dev, new char[length]{}, length, max_bufs)  {
         is_owner_ = true;
     }
 
@@ -95,11 +98,11 @@ public:
         }
     }
 
-    Buffer get_buf(size_t offset, size_t length) {
+    std::unique_ptr<Buffer> get_buf(size_t offset, size_t length) {
         doca_buf *buf{};
         check_derr(doca_buf_inventory_buf_get_by_addr(buf_inv_, mmap_, mem + offset, length, &buf),
             "failed to get doca buf");
-        return Buffer(buf, mem + offset, length);
+        return std::make_unique<Buffer>(buf, mem + offset, length);
     }
 
 private:

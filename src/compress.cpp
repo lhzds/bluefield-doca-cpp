@@ -27,18 +27,18 @@ void Compress::decompress_lz4_block_cb(
     doca_compress_task_decompress_lz4_block *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
+    doca_task_free(doca_compress_task_decompress_lz4_block_as_task(task));
     auto *compress = (Compress *)ctx_user_data.ptr;
     compress->custom_decompress_lz4_block_cb(task_user_data);
-    doca_task_free(doca_compress_task_decompress_lz4_block_as_task(task));
 }
 
 void Compress::decompress_lz4_block_error_cb(
     doca_compress_task_decompress_lz4_block *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
+    doca_task_free(doca_compress_task_decompress_lz4_block_as_task(task));
     auto *compress = (Compress *)ctx_user_data.ptr;
     compress->custom_decompress_lz4_block_error_cb(task_user_data);
-    doca_task_free(doca_compress_task_decompress_lz4_block_as_task(task));
 }
 
 doca_task *Compress::alloc_decompress_lz4_block_task(const doca_buf *src_buff, doca_buf *dst_buff,
