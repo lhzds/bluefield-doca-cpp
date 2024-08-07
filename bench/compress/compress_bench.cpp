@@ -2,6 +2,7 @@
 #include "docacxx/mem.h"
 #include "../part_iterator.h"
 #include <argparse/argparse.hpp>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <stdexcept>
@@ -16,6 +17,7 @@ std::string pci_addr;
 size_t block_size;
 std::string input_file;
 std::string output_file;
+std::string algorithm;
 constexpr size_t MAX_DECOMPRESS_TASK_NUM{65536};
 
 void read_args(int argc, char **argv) {
@@ -34,6 +36,9 @@ void read_args(int argc, char **argv) {
         .help("block size")
         .required()
         .scan<'d', size_t>();
+    program.add_argument("-r")
+        .help("compression algorithm")
+        .required();
 
     try {
         program.parse_args(argc, argv);
@@ -48,16 +53,18 @@ void read_args(int argc, char **argv) {
     block_size = program.get<size_t>("-b");
     input_file = program.get<std::string>("-i");
     output_file = program.get<std::string>("-o");
+    algorithm = program.get<std::string>("-r");
 
     std::cout << "Device pci address: " << pci_addr << std::endl;
     std::cout << "Block size: " << block_size << std::endl;
     std::cout << "Input file: " << input_file << std::endl;
     std::cout << "Output file: " << output_file << std::endl;
+    std::cout << "Algorithm: " << algorithm << std::endl;
 }
 
 std::vector<std::unique_ptr<docacxx::Buffer>> compress(const std::string &in_data,
-    docacxx::BufInventory &buf_inv, Lz4Compressor &compressor) {
-    std::vector<std::unique_ptr<docacxx::Buffer>> compresseds;
+    docacxx::BufInventory &buf_inv, Compressor &compressor) {
+    std::vector<std::unique_ptr<docacxx::Buffer>> compressed_blocks;
     PartIterator in_part_iter(in_data.size(), block_size);
     PartIterator out_part_iter(buf_inv.len, compressor.compress_bound(block_size));
 
@@ -65,8 +72,8 @@ std::vector<std::unique_ptr<docacxx::Buffer>> compress(const std::string &in_dat
         auto [in_offset, in_len] = in_part_iter.next();
         auto [out_offset, out_len] = out_part_iter.next();
 
-        compresseds.emplace_back(buf_inv.get_buf(out_offset, out_len));
-        auto &buf = compresseds.back();
+        compressed_blocks.emplace_back(buf_inv.get_buf(out_offset, out_len));
+        auto &buf = compressed_blocks.back();
 
         auto clen = compressor.compress(in_data.data() + in_offset, buf->mem,
             in_len, buf->len);
@@ -77,7 +84,7 @@ std::vector<std::unique_ptr<docacxx::Buffer>> compress(const std::string &in_dat
         throw std::runtime_error("error allocate data");
     }
     
-    return compresseds;
+    return compressed_blocks;
 }
 
 int main(int argc, char **argv) {
@@ -109,27 +116,36 @@ int main(int argc, char **argv) {
             "failed to open dev");
 
     // create compressor
-    Lz4Compressor lz4_compressor(dev, MAX_DECOMPRESS_TASK_NUM);
+    std::unique_ptr<Compressor> compressor;
+    if (algorithm == "lz4") {
+        compressor = std::make_unique<Lz4Compressor>(dev, MAX_DECOMPRESS_TASK_NUM);
+    } else if (algorithm == "deflate") {
+        compressor = std::make_unique<DeflateCompressor>(dev, MAX_DECOMPRESS_TASK_NUM);
+    } else {
+        std::cerr << "Unsupported algorithm" << std::endl;
+        exit(EXIT_FAILURE); 
+    }
 
     // create doca buf inv
     size_t block_num = (file_size + block_size - 1) / block_size;
-    docacxx::BufInventory src_buf_inv(dev, block_num * lz4_compressor.compress_bound(block_size),
+    docacxx::BufInventory src_buf_inv(dev, block_num * compressor->compress_bound(block_size),
         block_num);
     docacxx::BufInventory dst_buf_inv(dev, block_num * block_size, block_num);
 
-    // create lz4-compressed source data
-    std::vector<std::unique_ptr<docacxx::Buffer>> compresseds = compress(file_data, src_buf_inv, lz4_compressor);
+    // create compressed source data
+    std::vector<std::unique_ptr<docacxx::Buffer>> compressed_blocks = compress(file_data, src_buf_inv,
+        *compressor);
 
-    // decompress_bench (cuz bf3 only supports lz4 decompression)
-    std::vector<std::unique_ptr<docacxx::Buffer>> decompresseds;
+    // decompress_bench (cuz bf3 only supports hardware-accelerated decompression)
+    std::vector<std::unique_ptr<docacxx::Buffer>> decompressed_blocks;
     PartIterator part_iter(file_size, block_size);
     while (part_iter.has_next()) {
         auto [offset, len] = part_iter.next();
-        decompresseds.emplace_back(dst_buf_inv.get_buf(offset, len));
+        decompressed_blocks.emplace_back(dst_buf_inv.get_buf(offset, len));
     }
 
     auto start = Timer::now();
-    lz4_compressor.decompress(compresseds, decompresseds);
+    compressor->decompress(compressed_blocks, decompressed_blocks);
     auto end = Timer::now();
     auto decompress_time = duration_cast<Duration>(end - start);
 

@@ -1,4 +1,5 @@
 add_requires("lz4")
+add_requires("isal")
 add_requires("nlohmann_json", {alias = "json"})
 add_requires("argparse")
 
@@ -6,4 +7,4 @@ target("compress_bench")
     set_kind("binary")
     add_files("compress/*.cpp")
     add_deps("docacxx")
-    add_packages("lz4", "json", "argparse")
+    add_packages("lz4", "isal", "json", "argparse")
