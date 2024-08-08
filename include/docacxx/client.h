@@ -36,17 +36,12 @@ class Client: public ContextBase {
     doca_comch_connection *get_connection();
     bool is_connected() const { return state == DOCA_CTX_STATE_RUNNING; }
 
-    CustomSendCb custom_send_cb{[] {
-    }};
+    CustomSendCb custom_send_cb{[] {}};
     CustomSendCb custom_send_error_cb{[] {
         throw std::runtime_error("client send error.");
     }};
-    CustomRecvCb custom_recv_cb{
-        [](uint8_t *, uint32_t, doca_comch_connection *) {
-        }};
-    CustomConsumerCb custom_new_consumer_cb{
-        [](doca_comch_connection *, uint32_t) {
-        }};
+    CustomRecvCb custom_recv_cb{[](uint8_t *, uint32_t, doca_comch_connection *) {}};
+    CustomConsumerCb custom_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
     CustomConsumerCb custom_expired_consumer_cb{
         [](doca_comch_connection *, uint32_t id) {
             throw std::runtime_error(

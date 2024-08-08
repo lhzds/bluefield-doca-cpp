@@ -28,8 +28,7 @@ public:
     Cap cap{};
     doca_comch_producer *inner{};
 
-    CustomSendCb custom_send_cb{[] {
-    }};
+    CustomSendCb custom_send_cb{[] {}};
     CustomSendCb custom_send_error_cb{[] {
         throw std::runtime_error("producer send error");
     }};

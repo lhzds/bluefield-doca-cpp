@@ -72,7 +72,6 @@ public:
 protected:
     doca_pe *pe_{};
     size_t doca_max_decompress_task_num_{};
-    std::unique_ptr<docacxx::BufInventory> buf_inv_;
     std::unique_ptr<docacxx::Compress> decompressor_;
     size_t finished_{};
     std::queue<std::pair<const doca_buf *, doca_buf *>> wait_queue_;

@@ -7,7 +7,7 @@
 namespace docacxx {
 Compress::Compress(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
     check_derr(doca_compress_create(dev, &inner),
-        "failed to create compress consumer");
+        "failed to create compress context");
     init_ctx(doca_compress_as_ctx(inner), pe);
 }
 
@@ -23,7 +23,7 @@ Lz4Compress::Lz4Compress(doca_pe *pe, doca_dev *dev, const Cfg &cfg)
     :Compress(pe, dev, cfg) {
     check_derr(doca_compress_task_decompress_lz4_block_set_conf(inner,
         decompress_lz4_block_cb, decompress_lz4_block_error_cb,
-        cfg.decompress_task_num), "failed to create compress");
+        cfg.decompress_task_num), "failed to set lz4 decompression task conf");
 }
 
 void Lz4Compress::decompress_lz4_block_cb(
@@ -60,7 +60,7 @@ DeflateCompress::DeflateCompress(doca_pe *pe, doca_dev *dev, const Cfg &cfg)
     :Compress(pe, dev, cfg) {
     check_derr(doca_compress_task_decompress_deflate_set_conf(inner,
         decompress_deflate_cb, decompress_deflate_error_cb,
-        cfg.decompress_task_num), "failed to create compress");
+        cfg.decompress_task_num), "failed to set deflate decompression task conf");
 }
 
 void DeflateCompress::decompress_deflate_cb(

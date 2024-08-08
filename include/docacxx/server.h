@@ -36,22 +36,16 @@ public:
         std::string_view dev_pci,
         std::string_view dev_rep_pci, doca_pe *pe, const Cfg &cfg);
 
-    CustomSendCb custom_send_cb{[] {
-    }};
+    CustomSendCb custom_send_cb{[] {}};
     CustomSendCb custom_send_error_cb{[] {
         throw std::runtime_error("client send error.");
     }};
-    CustomRecvCb custom_recv_cb{
-        [](uint8_t *, uint32_t, doca_comch_connection *) {
-        }};
-    CustomConnCb custom_new_conn_cb{[](doca_comch_connection *) {
-    }};
+    CustomRecvCb custom_recv_cb{[](uint8_t *, uint32_t, doca_comch_connection *) {}};
+    CustomConnCb custom_new_conn_cb{[](doca_comch_connection *) {}};
     CustomConnCb custom_disconn_cb{[](doca_comch_connection *) {
         throw std::runtime_error("peer is disconnected");
     }};
-    CustomConsumerCb custom_new_consumer_cb{
-        [](doca_comch_connection *, uint32_t) {
-        }};
+    CustomConsumerCb custom_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
     CustomConsumerCb custom_expired_consumer_cb{
         [](doca_comch_connection *, uint32_t id) {
             throw std::runtime_error(

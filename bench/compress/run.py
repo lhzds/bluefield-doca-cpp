@@ -20,7 +20,8 @@ for alg in algs:
             "-b", str(bsize),
             "-i", input_file,
             "-o", output_filename(alg, str(bsize)),
-            "-r", alg
+            "-r", alg,
+            "-n", 65536
         ]
         subprocess.run(command)
         bsize *= 2

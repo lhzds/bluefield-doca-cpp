@@ -8,7 +8,7 @@
 namespace docacxx {
 class Compress: public ContextBase {
 public:
-    using CustomCompressCb = std::function<void(doca_data task_user_data)>;
+    using CustomCompressCb = std::function<void(doca_data)>;
 
     struct Cfg {
         size_t decompress_task_num{};

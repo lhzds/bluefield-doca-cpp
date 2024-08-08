@@ -1,6 +1,7 @@
 #include "compressor.h"
 #include "docacxx/mem.h"
 #include "../part_iterator.h"
+#include "../print_util.h"
 #include <argparse/argparse.hpp>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -18,7 +19,7 @@ size_t block_size;
 std::string input_file;
 std::string output_file;
 std::string algorithm;
-constexpr size_t MAX_DECOMPRESS_TASK_NUM{65536};
+size_t max_decompress_task_num;
 
 void read_args(int argc, char **argv) {
     argparse::ArgumentParser program("compress_bench");
@@ -39,6 +40,10 @@ void read_args(int argc, char **argv) {
     program.add_argument("-r")
         .help("compression algorithm")
         .required();
+    program.add_argument("-n")
+        .help("max decompress task num")
+        .required()
+        .scan<'d', size_t>();
 
     try {
         program.parse_args(argc, argv);
@@ -54,6 +59,7 @@ void read_args(int argc, char **argv) {
     input_file = program.get<std::string>("-i");
     output_file = program.get<std::string>("-o");
     algorithm = program.get<std::string>("-r");
+    max_decompress_task_num = program.get<size_t>("-n");
 
     std::cout << "Device pci address: " << pci_addr << std::endl;
     std::cout << "Block size: " << block_size << std::endl;
@@ -118,9 +124,9 @@ int main(int argc, char **argv) {
     // create compressor
     std::unique_ptr<Compressor> compressor;
     if (algorithm == "lz4") {
-        compressor = std::make_unique<Lz4Compressor>(dev, MAX_DECOMPRESS_TASK_NUM);
+        compressor = std::make_unique<Lz4Compressor>(dev, max_decompress_task_num);
     } else if (algorithm == "deflate") {
-        compressor = std::make_unique<DeflateCompressor>(dev, MAX_DECOMPRESS_TASK_NUM);
+        compressor = std::make_unique<DeflateCompressor>(dev, max_decompress_task_num);
     } else {
         std::cerr << "Unsupported algorithm" << std::endl;
         exit(EXIT_FAILURE); 
@@ -165,9 +171,11 @@ int main(int argc, char **argv) {
     }
 
     Json json;
-    json["block_size"] = block_size;
+    json["algorithm"] = algorithm;
     json["file_size"] = file_size;
-    json["decompress_time"] = fmt::format("{:.2f}", static_cast<double>(decompress_time.count()));
+    json["block_size"] = block_size;
+    json["decompress"]["count"] = compressed_blocks.size();
+    json["decompress"]["time"] = duration_str(decompress_time);
 
     std::cout << json.dump(4) << std::endl;
     output_fs << json.dump(4) << std::endl;
