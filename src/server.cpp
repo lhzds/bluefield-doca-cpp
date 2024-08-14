@@ -8,16 +8,8 @@
 namespace docacxx {
 Server::Server(
     std::string_view name,
-    std::string_view dev_pci,
-    std::string_view dev_rep_pci,
+    doca_dev *dev, doca_dev_rep *dev_rep,
     doca_pe *pe, const Cfg &cfg) {
-    check_derr(
-        open_doca_device_with_pci(dev_pci.data(), &dev), "failed to open dev");
-    check_derr(
-        open_doca_device_rep_with_pci(
-            dev, DOCA_DEVINFO_REP_FILTER_NET, dev_rep_pci.data(), &dev_rep),
-        "failed to open rep");
-
     check_derr(
         doca_comch_server_create(dev, dev_rep, name.data(), &inner),
         "failed to create server");

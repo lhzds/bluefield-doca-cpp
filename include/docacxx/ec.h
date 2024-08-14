@@ -29,6 +29,8 @@ public:
 
     doca_ec_matrix *create_matrix(doca_ec_matrix_type type,
         size_t data_block_count, size_t rdnc_block_count);
+    doca_ec_matrix *create_recover_matrix(const struct doca_ec_matrix *coding_matrix,
+        std::vector<uint32_t> &missing_indices);
     void destroy_matrix(doca_ec_matrix *);
 
     doca_task *alloc_create_task(const doca_ec_matrix *matrix,

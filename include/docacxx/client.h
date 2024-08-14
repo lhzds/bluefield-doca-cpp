@@ -13,6 +13,7 @@
 
 namespace docacxx {
 class Client: public ContextBase {
+public:
     using CustomSendCb = std::function<void()>;
     using CustomRecvCb =
         std::function<void(uint8_t *, uint32_t, doca_comch_connection *)>;
@@ -20,7 +21,7 @@ class Client: public ContextBase {
         std::function<void(doca_comch_connection *, uint32_t)>;
 
     struct Cfg {
-        size_t max_send_task_num{};
+        size_t max_send_task_num{1};
         // size_t max_msg_size{};
         // size_t max_recv_queue_size{};
     };
@@ -29,7 +30,7 @@ class Client: public ContextBase {
     doca_comch_client *client{};
 
     Client(std::string_view server_name,
-        std::string_view dev_pci, doca_pe *pe , const Cfg &cfg);
+        doca_dev *dev, doca_pe *pe , const Cfg &cfg);
     
     void clean_impl() override;
 

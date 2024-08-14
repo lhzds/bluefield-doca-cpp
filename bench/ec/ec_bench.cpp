@@ -15,7 +15,7 @@ using Json = nlohmann::json;
 
 constexpr doca_ec_matrix_type MATRIX_TYPE{DOCA_EC_MATRIX_TYPE_CAUCHY};
 
-std::string pci_addr;
+std::string dev_pci_addr;
 std::string output_file;
 size_t block_size;
 size_t data_block_count;
@@ -59,7 +59,7 @@ void read_args(int argc, char **argv) {
         std::exit(1);
     }
 
-    pci_addr = program.get<std::string>("-a");
+    dev_pci_addr = program.get<std::string>("-a");
     output_file = program.get<std::string>("-o");
     block_size = program.get<size_t>("-b");
     data_block_count = program.get<size_t>("-d");
@@ -72,7 +72,7 @@ void read_args(int argc, char **argv) {
         repeat_time = 10 / max_create_task_num + 1;
     }
 
-    std::cout << "Device pci address: " << pci_addr << std::endl;
+    std::cout << "Device pci address: " << dev_pci_addr << std::endl;
     std::cout << "Block size: " << block_size << std::endl;
     std::cout << "Output file: " << output_file << std::endl;
     std::cout << "Data block num: " << data_block_count << std::endl;
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     
     // open device
     doca_dev *dev{};
-    docacxx::check_derr(docacxx::open_doca_device_with_pci(pci_addr.data(), &dev),
+    docacxx::check_derr(docacxx::open_doca_device_with_pci(dev_pci_addr.data(), &dev),
             "failed to open dev");
 
     // create doca buf inv
@@ -101,8 +101,7 @@ int main(int argc, char **argv) {
     src_bufs.reserve(max_create_task_num);
     for (size_t i{}; i < max_create_task_num; ++i) {
         auto buf_len = data_block_count * block_size;
-        src_bufs.emplace_back(src_buf_inv.get_buf(i * buf_len,
-            buf_len));
+        src_bufs.emplace_back(src_buf_inv.get_buf(i * buf_len, buf_len));
         src_bufs.back()->set_doca_buf_data(buf_len);
     }
 
@@ -114,9 +113,7 @@ int main(int argc, char **argv) {
     }
 
     // create ec encoder
-    ErasureCoder::Cfg cfg;
-    cfg.create_task_num = max_create_task_num;
-    ErasureCoder encoder(dev, MATRIX_TYPE, data_block_count, rdnc_block_count, cfg);
+    ErasureCoder encoder(dev, MATRIX_TYPE, data_block_count, rdnc_block_count, max_create_task_num);
 
     // ec create bench
     auto start = Timer::now();
@@ -131,6 +128,36 @@ int main(int argc, char **argv) {
 
     auto end = Timer::now();
     auto create_time = duration_cast<Duration>(end - start);
+
+    // test ec recover
+    docacxx::BufInventory recover_buf_inv(dev, block_size * (data_block_count + rdnc_block_count), 2);
+
+    size_t remain_block_count = data_block_count - rdnc_block_count;
+    std::vector<uint32_t> missing_indices;
+    for (uint32_t i{}; i < rdnc_block_count; ++i) {
+        missing_indices.emplace_back(i + remain_block_count);
+    }
+
+    auto available_buf = recover_buf_inv.get_buf(0, data_block_count * block_size);
+    std::memcpy(available_buf->mem, src_bufs[0]->mem, remain_block_count * block_size);
+    std::memcpy(available_buf->mem + remain_block_count * block_size,
+        dst_bufs[0]->mem, rdnc_block_count * block_size);
+    available_buf->set_doca_buf_data(data_block_count * block_size);
+    
+    auto recovered_buf = recover_buf_inv.get_buf(data_block_count * block_size,
+        rdnc_block_count * block_size);
+
+    encoder.recover(available_buf, recovered_buf, missing_indices);
+
+    {
+        std::string_view a = recovered_buf->get_doca_buf_data();
+        std::string_view b(src_bufs[0]->mem + remain_block_count * block_size,
+            rdnc_block_count * block_size);
+        if (a != b) {
+            std::cerr << "Failed to recover" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
 
     // output_perf
     std::ofstream output_fs{output_file};

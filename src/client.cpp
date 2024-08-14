@@ -7,10 +7,7 @@
 namespace docacxx {
 Client::Client(
     std::string_view server_name,
-    std::string_view dev_pci, doca_pe *pe, const Cfg &cfg) {
-    check_derr(
-        open_doca_device_with_pci(dev_pci.data(), &dev), "failed to open dev");
-    
+    doca_dev *dev, doca_pe *pe, const Cfg &cfg) {
     check_derr(
         doca_comch_client_create(dev, server_name.data(), &client),
         "failed to create client");    

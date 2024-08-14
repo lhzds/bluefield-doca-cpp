@@ -22,7 +22,7 @@ public:
         std::function<void(doca_comch_connection *, uint32_t)>;
 
     struct Cfg {
-        size_t max_send_task_num{};
+        size_t max_send_task_num{1};
         // size_t max_msg_size{};
         // size_t max_recv_queue_size{};
     };
@@ -33,8 +33,7 @@ public:
 
     Server(
         std::string_view name,
-        std::string_view dev_pci,
-        std::string_view dev_rep_pci, doca_pe *pe, const Cfg &cfg);
+        doca_dev *dev, doca_dev_rep *dev_rep, doca_pe *pe, const Cfg &cfg);
 
     CustomSendCb custom_send_cb{[] {}};
     CustomSendCb custom_send_error_cb{[] {

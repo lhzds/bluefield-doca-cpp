@@ -14,7 +14,7 @@ using Duration = std::chrono::microseconds;
 
 using Json = nlohmann::json;
 
-std::string pci_addr;
+std::string dev_pci_addr;
 size_t block_size;
 std::string input_file;
 std::string output_file;
@@ -54,14 +54,14 @@ void read_args(int argc, char **argv) {
         std::exit(1);
     }
 
-    pci_addr = program.get<std::string>("-a");
+    dev_pci_addr = program.get<std::string>("-a");
     block_size = program.get<size_t>("-b");
     input_file = program.get<std::string>("-i");
     output_file = program.get<std::string>("-o");
     algorithm = program.get<std::string>("-r");
     max_decompress_task_num = program.get<size_t>("-n");
 
-    std::cout << "Device pci address: " << pci_addr << std::endl;
+    std::cout << "Device pci address: " << dev_pci_addr << std::endl;
     std::cout << "Block size: " << block_size << std::endl;
     std::cout << "Input file: " << input_file << std::endl;
     std::cout << "Output file: " << output_file << std::endl;
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
     
     // open device
     doca_dev *dev{};
-    docacxx::check_derr(docacxx::open_doca_device_with_pci(pci_addr.data(), &dev),
+    docacxx::check_derr(docacxx::open_doca_device_with_pci(dev_pci_addr.data(), &dev),
             "failed to open dev");
 
     // create compressor

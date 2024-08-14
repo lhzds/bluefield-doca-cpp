@@ -34,8 +34,16 @@ doca_ec_matrix *Ec::create_matrix(doca_ec_matrix_type type,
     return matrix;
 }
 
+doca_ec_matrix *Ec::create_recover_matrix(const struct doca_ec_matrix *coding_matrix,
+    std::vector<uint32_t> &missing_indices) {
+    doca_ec_matrix *matrix{};
+    doca_ec_matrix_create_recover(inner, coding_matrix,
+        missing_indices.data(), missing_indices.size(), &matrix);
+    return matrix;
+}
+
 void Ec::destroy_matrix(doca_ec_matrix *matrix) {
-    destroy_matrix(matrix);
+    check_derr(doca_ec_matrix_destroy(matrix), "failed to destroy matrix");
 }
 
 doca_task *Ec::alloc_create_task(const doca_ec_matrix *matrix,
@@ -95,7 +103,7 @@ void Ec::update_cb(doca_ec_task_update *task,
     doca_data ctx_user_data) {
     doca_task_free(doca_ec_task_update_as_task(task));
     auto *compress = (Ec *)ctx_user_data.ptr;
-    compress->custom_update_error_cb(task_user_data);
+    compress->custom_update_cb(task_user_data);
 }
 
 void Ec::update_error_cb(doca_ec_task_update *task,
@@ -111,7 +119,7 @@ void Ec::recover_cb(doca_ec_task_recover *task,
     doca_data ctx_user_data) {
     doca_task_free(doca_ec_task_recover_as_task(task));
     auto *compress = (Ec *)ctx_user_data.ptr;
-    compress->custom_recover_error_cb(task_user_data);
+    compress->custom_recover_cb(task_user_data);
 }
 
 void Ec::recover_error_cb(doca_ec_task_recover *task,

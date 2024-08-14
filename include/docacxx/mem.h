@@ -52,6 +52,7 @@ public:
 
 class BufInventory {
 public:
+    doca_mmap *mmap{};
     char *mem;
     const size_t len{};
 
@@ -62,15 +63,15 @@ public:
 
         check_derr(
             doca_buf_inventory_start(buf_inv_), "failed to start buf inv");
-        check_derr(doca_mmap_create(&mmap_), "failed to create mmap");
-        check_derr(doca_mmap_add_dev(mmap_, dev), "failed to add dev to mmap");
+        check_derr(doca_mmap_create(&mmap), "failed to create mmap");
+        check_derr(doca_mmap_add_dev(mmap, dev), "failed to add dev to mmap");
         check_derr(
-            doca_mmap_set_permissions(mmap_, DOCA_ACCESS_FLAG_PCI_READ_WRITE),
+            doca_mmap_set_permissions(mmap, DOCA_ACCESS_FLAG_PCI_READ_WRITE),
             "failed to set permissions of mmap");
         check_derr(
-            doca_mmap_set_memrange(mmap_, mem, len),
+            doca_mmap_set_memrange(mmap, mem, len),
             "failed set memrange of mmap");
-        check_derr(doca_mmap_start(mmap_), "failed to start mmap");;
+        check_derr(doca_mmap_start(mmap), "failed to start mmap");;
     }
 
     BufInventory(doca_dev *dev, size_t length, size_t max_bufs):
@@ -79,7 +80,7 @@ public:
     }
 
     ~BufInventory() {
-        auto result = doca_mmap_destroy(mmap_);
+        auto result = doca_mmap_destroy(mmap);
         if (result != DOCA_SUCCESS) {
             std::cerr << "Failed to destroy mmap: "
                       << doca_error_get_descr(result) << std::endl;
@@ -100,14 +101,13 @@ public:
 
     std::unique_ptr<Buffer> get_buf(size_t offset, size_t length) {
         doca_buf *buf{};
-        check_derr(doca_buf_inventory_buf_get_by_addr(buf_inv_, mmap_, mem + offset, length, &buf),
+        check_derr(doca_buf_inventory_buf_get_by_addr(buf_inv_, mmap, mem + offset, length, &buf),
             "failed to get doca buf");
         return std::make_unique<Buffer>(buf, mem + offset, length);
     }
 
 private:
     bool is_owner_{};
-    doca_mmap *mmap_{};
     doca_buf_inventory *buf_inv_{};
 };
 }
