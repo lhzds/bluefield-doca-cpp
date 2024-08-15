@@ -19,7 +19,7 @@ Producer::Producer(
     check_derr(
         doca_comch_producer_create(peer_conn, &inner),
         "failed to create comch producer");
-    init_ctx(doca_comch_producer_as_ctx(inner), pe);
+    init_ctx(doca_comch_producer_as_ctx(inner), pe_);
 
     // create task pool
     check_derr(

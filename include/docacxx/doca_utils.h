@@ -20,9 +20,8 @@ static inline void throw_with(std::string_view format, Args... args) {
 
 static inline void check_derr(
     doca_error_t doca_error,
-    const char *message,
-    doca_error_t expected = DOCA_SUCCESS) {
-    if (doca_error != expected) [[unlikely]] {
+    const char *message) {
+    if (doca_error != DOCA_ERROR_IN_PROGRESS && doca_error != DOCA_SUCCESS) [[unlikely]] {
         throw_with(
             "[{}]{}: {}", doca_error_get_name(doca_error), message,
             doca_error_get_descr(doca_error));

@@ -92,7 +92,9 @@ public:
                 auto buf = wait_queue_.front();
                 wait_queue_.pop();
                 auto *task = inner_->alloc_send_task(buf, nullptr, 0, consumer_id_);
-                while (not inner_->submit(task));
+                while (not inner_->submit(task)) {
+                    doca_pe_progress(pe_);
+                }
             }
 
             ++finished_;
@@ -122,7 +124,9 @@ public:
 
         for (size_t i{}; i < std::min(bufs.size(), doca_max_send_task_num_); ++i) {
             auto *task = inner_->alloc_send_task(bufs[i]->buf, nullptr, 0, consumer_id_);
-            while (not inner_->submit(task));
+            while (not inner_->submit(task)) {
+                doca_pe_progress(pe_);
+            }
         }
 
         if (bufs.size() > doca_max_send_task_num_) {

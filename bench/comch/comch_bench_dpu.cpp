@@ -127,8 +127,10 @@ int main(int argc, char **argv) {
     DpuEnd dpu_end(SERVER_NAME, dev, dev_rep, recv_buf_inv.mmap,
         max_send_task_num, max_recv_task_num);
 
+    decltype(Timer::now()) start, end;
+
     // recv bench
-    auto start = Timer::now();
+    start = Timer::now();
     dpu_end.recv(recv_bufs);
 
     for (size_t i{1}; i < recv_repeat_time; ++i) {
@@ -137,7 +139,7 @@ int main(int argc, char **argv) {
         }
         dpu_end.recv(recv_bufs);
     }
-    auto end = Timer::now();
+    end = Timer::now();
     auto recv_time = duration_cast<Duration>(end - start);
 
     // send bench
@@ -145,9 +147,6 @@ int main(int argc, char **argv) {
     dpu_end.send(send_bufs);
 
     for (size_t i{1}; i < send_repeat_time; ++i) {
-        for (auto &send_buf : send_bufs) {
-            send_buf->clear_doca_buf_data();
-        }
         dpu_end.send(send_bufs);
     }
     end = Timer::now();
