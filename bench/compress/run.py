@@ -1,28 +1,53 @@
 import os
 import subprocess
+from tqdm import tqdm
 
 exe = os.path.expanduser("~/docacxx/build/linux/arm64-v8a/release/compress_bench")
 input_file =os.path.expanduser("~/workload/linux-5.10.100.tar")
-output_dir = os.path.expanduser("~/docacxx/bench_result")
+output_dir = os.path.expanduser("~/docacxx/bench_result/comp")
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# algs
 algs = ["deflate", "lz4"]
 
-def output_filename(a, bz):
-    return os.path.join(output_dir, a, "{}.json".format(bz))
+# dev_pci
+dev_pci = "03:00.1"
 
+# block size
 kb = 1024
+mb = 1024 * 1024
+bsizes = []
+t = 4 * kb
+while t <= 1 * mb:
+    bsizes.append(t)
+    t *= 2
+    
+# parallel tasks
+ns = []
+t = 1
+while t <= 128:
+    ns.append(t)
+    t *= 2
+    
+# output file name
+def get_output_file(*args):
+    args = map(str, args)
+    return os.path.join(output_dir, '_'.join(args) + '.json')
 
-for alg in algs:
-    bsize = 4 * kb
-    while bsize <= 256 * kb:
-        command = [
-            exe,
-            "-a", "03:00.1",
-            "-b", str(bsize),
-            "-i", input_file,
-            "-o", output_filename(alg, str(bsize)),
-            "-r", alg,
-            "-n", 65536
-        ]
-        subprocess.run(command)
-        bsize *= 2
-        print("------------------")
+
+with tqdm(total=len(ns)*len(bsizes)*len(algs), desc="compress bench") as pbar:
+    for alg in algs:
+        for bsize in bsizes:
+            for n in ns:
+                command = [
+                    exe,
+                    "-a", dev_pci,
+                    "-i", input_file,
+                    "-o", get_output_file(alg, n, bsize),
+                    "-b", str(bsize),
+                    "-r", alg,
+                    "-n", str(n)
+                ]
+                subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                pbar.update(1)

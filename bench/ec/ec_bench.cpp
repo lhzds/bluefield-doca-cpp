@@ -170,6 +170,8 @@ int main(int argc, char **argv) {
     json["data_block_count"] = data_block_count;
     json["rdnc_block_count"] = rdnc_block_count;
     json["block_size"] = block_size;
+    
+    json["create"]["task_num"] = max_create_task_num;
     json["create"]["count"] = max_create_task_num * repeat_time;
     json["create"]["time"] = duration_str(create_time);
 

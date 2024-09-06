@@ -174,6 +174,8 @@ int main(int argc, char **argv) {
     json["algorithm"] = algorithm;
     json["file_size"] = file_size;
     json["block_size"] = block_size;
+    
+    json["decompress"]["task_num"] = max_decompress_task_num;
     json["decompress"]["count"] = compressed_blocks.size();
     json["decompress"]["time"] = duration_str(decompress_time);
 

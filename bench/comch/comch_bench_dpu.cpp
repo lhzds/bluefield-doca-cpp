@@ -168,8 +168,12 @@ int main(int argc, char **argv) {
 
     Json json;
     json["msg_size"] = msg_size;
+    
+    json["send"]["task_num"] = max_send_task_num;
     json["send"]["count"] = max_send_task_num * send_repeat_time;
     json["send"]["time"] = duration_str(send_time);
+
+    json["recv"]["task_num"] = max_recv_task_num;
     json["recv"]["count"] = max_recv_task_num * recv_repeat_time;
     json["recv"]["time"] = duration_str(recv_time);
 

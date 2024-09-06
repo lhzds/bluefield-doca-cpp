@@ -17,7 +17,6 @@ using Json = nlohmann::json;
 const char *SERVER_NAME{"bench_server"};
 
 std::string dev_pci_addr;
-std::string output_file;
 size_t msg_size;
 size_t max_send_task_num;
 size_t max_recv_task_num;
@@ -30,9 +29,6 @@ void read_args(int argc, char **argv) {
     
     program.add_argument("-a")
         .help("device pci address")
-        .required();
-    program.add_argument("-o")
-        .help("output file")
         .required();
     program.add_argument("-b")
         .help("msg size")
@@ -57,7 +53,6 @@ void read_args(int argc, char **argv) {
     }
 
     dev_pci_addr = program.get<std::string>("-a");
-    output_file = program.get<std::string>("-o");
     msg_size = program.get<size_t>("-b");
     max_send_task_num = program.get<size_t>("-s");
     max_recv_task_num = program.get<size_t>("-r");
@@ -75,7 +70,6 @@ void read_args(int argc, char **argv) {
     }
 
     std::cout << "Device pci address: " << dev_pci_addr << std::endl;
-    std::cout << "Output file: " << output_file << std::endl;
     std::cout << "Msg size: " << msg_size << std::endl;
     std::cout << "Max send task num: " << max_send_task_num << std::endl;
     std::cout << "Max recv task num: " << max_recv_task_num << std::endl;
