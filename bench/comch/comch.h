@@ -6,6 +6,7 @@
 #include <doca_dev.h>
 #include <optional>
 #include <queue>
+#include <memory>
 
 class SyncConsumer {
 public:

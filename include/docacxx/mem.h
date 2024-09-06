@@ -2,6 +2,7 @@
 
 #include <doca_compress.h>
 #include <iostream>
+#include <memory>
 #include <doca_mmap.h>
 #include <doca_buf.h>
 #include "doca_utils.h"

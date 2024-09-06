@@ -2,7 +2,7 @@ import os
 import subprocess
 from tqdm import tqdm
 
-host_exe = os.path.expanduser("~/docacxx/build/linux/arm64-v8a/release/comch_bench_host")
+host_exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/comch_bench_host")
 dpu_exe = os.path.expanduser("~/docacxx/build/linux/arm64-v8a/release/comch_bench_dpu")
 
 output_dir = os.path.expanduser("~/docacxx/bench_result/comch")
@@ -14,8 +14,8 @@ dpu_dev_pci = "03:00.1"
 dpu_dev_rep_pci = "cb:00.1"
 
 # for host
-host_username = "olh"
 host_dev_pci = "cb:00.1"
+host_username = "olh"
 host_ip = "192.168.100.1"
 
 # msg size
@@ -39,7 +39,7 @@ def get_output_file(*args):
     args = map(str, args)
     return os.path.join(output_dir, '_'.join(args) + '.json')
 
-with tqdm(total=len(ns)*len(bsizes)*len(drs), desc="comch bench") as pbar:
+with tqdm(total=len(ns)*len(msizes), desc="comch bench") as pbar:
     for msize in msizes:
         for n in ns:
             dpu_command = [
@@ -62,7 +62,7 @@ with tqdm(total=len(ns)*len(bsizes)*len(drs), desc="comch bench") as pbar:
             ssh_command = [
                 "ssh", "-o", "StrictHostKeyChecking=no", f"{host_username}@{host_ip}", f"{host_command}"
             ]
-            
+
             p1 = subprocess.Popen(dpu_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             p2 = subprocess.Popen(ssh_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             p1.wait()

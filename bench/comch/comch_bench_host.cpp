@@ -113,11 +113,7 @@ int main(int argc, char **argv) {
 
     // send bench
     host_end.send(send_bufs);
-
     for (size_t i{1}; i < send_repeat_time; ++i) {
-        for (auto &send_buf : send_bufs) {
-            send_buf->clear_doca_buf_data();
-        }
         host_end.send(send_bufs);
     }
 
