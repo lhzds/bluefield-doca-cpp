@@ -2,13 +2,13 @@ import os
 import subprocess
 from tqdm import tqdm
 
-exe = os.path.expanduser("~/docacxx/build/linux/arm64-v8a/release/ec_bench")
+exe = os.path.expanduser("/home/olh/repos/docacxx/build/linux/x86_64/release/ec_bench")
 output_dir = os.path.expanduser("~/docacxx/bench_result/ec")
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 # dev_pci
-dev_pci = "03:00.1"
+dev_pci = "cb:00.0"
 
 # data blocks/redundant blocks
 drs = [(4, 2), (6, 3), (8, 3)]
@@ -46,7 +46,9 @@ with tqdm(total=len(ns)*len(bsizes)*len(drs), desc="ec bench") as pbar:
                     "-b", str(bsize),
                     "-d", str(d),
                     "-r", str(r),
-                    "-n", str(n)
+                    "-n", str(n),
+                    "-m", str(n)
                 ]
+
                 subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 pbar.update(1)

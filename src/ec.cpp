@@ -86,47 +86,47 @@ void Ec::create_cb(doca_ec_task_create *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
     doca_task_free(doca_ec_task_create_as_task(task));
-    auto *compress = (Ec *)ctx_user_data.ptr;
-    compress->custom_create_cb(task_user_data);
+    auto *ec = (Ec *)ctx_user_data.ptr;
+    ec->custom_create_cb(task_user_data);
 }
 
 void Ec::create_error_cb(doca_ec_task_create *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
     doca_task_free(doca_ec_task_create_as_task(task));
-    auto *compress = (Ec *)ctx_user_data.ptr;
-    compress->custom_create_error_cb(task_user_data);
+    auto *ec = (Ec *)ctx_user_data.ptr;
+    ec->custom_create_error_cb(task_user_data);
 }
 
 void Ec::update_cb(doca_ec_task_update *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
     doca_task_free(doca_ec_task_update_as_task(task));
-    auto *compress = (Ec *)ctx_user_data.ptr;
-    compress->custom_update_cb(task_user_data);
+    auto *ec = (Ec *)ctx_user_data.ptr;
+    ec->custom_update_cb(task_user_data);
 }
 
 void Ec::update_error_cb(doca_ec_task_update *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
     doca_task_free(doca_ec_task_update_as_task(task));
-    auto *compress = (Ec *)ctx_user_data.ptr;
-    compress->custom_update_error_cb(task_user_data);
+    auto *ec = (Ec *)ctx_user_data.ptr;
+    ec->custom_update_error_cb(task_user_data);
 }
 
 void Ec::recover_cb(doca_ec_task_recover *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
     doca_task_free(doca_ec_task_recover_as_task(task));
-    auto *compress = (Ec *)ctx_user_data.ptr;
-    compress->custom_recover_cb(task_user_data);
+    auto *ec = (Ec *)ctx_user_data.ptr;
+    ec->custom_recover_cb(task_user_data);
 }
 
 void Ec::recover_error_cb(doca_ec_task_recover *task,
     doca_data task_user_data,
     doca_data ctx_user_data) {
     doca_task_free(doca_ec_task_recover_as_task(task));
-    auto *compress = (Ec *)ctx_user_data.ptr;
-    compress->custom_recover_error_cb(task_user_data);
+    auto *ec = (Ec *)ctx_user_data.ptr;
+    ec->custom_recover_error_cb(task_user_data);
 }
 }
