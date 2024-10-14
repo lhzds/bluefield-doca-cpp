@@ -13,7 +13,7 @@ Producer::Producer(
     doca_devinfo *dev_info = doca_dev_as_devinfo(dev);
     doca_comch_producer_cap_get_max_num_tasks(dev_info, &m_cap.m_max_send_task_num);
     doca_comch_producer_cap_get_max_buf_size(dev_info, &m_cap.m_max_buf_len);
-    assert(cfg.send_task_num <= cap.max_send_task_num);
+    assert(cfg.m_send_task_num <= m_cap.m_max_send_task_num);
 
     // create context
     check_derr(

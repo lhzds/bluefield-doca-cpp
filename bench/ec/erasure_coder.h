@@ -46,7 +46,6 @@ public:
 
         m_create_matrix = m_inner->create_matrix(mat_type, data_block_count,
             rdnc_block_count);
-        assert(matrix_);
     }
 
     ~ErasureCoder() {
