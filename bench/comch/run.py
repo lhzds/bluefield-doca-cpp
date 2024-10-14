@@ -48,15 +48,13 @@ with tqdm(total=len(ns)*len(msizes), desc="comch bench") as pbar:
                 "-p", dpu_dev_rep_pci,
                 "-o", get_output_file(n, msize),
                 "-b", str(msize),
-                "-s", str(n),
-                "-r", str(n)
+                "-c", str(n)
             ]
             host_command = ' '.join([
                 host_exe,
                 "-a", host_dev_pci,
                 "-b", str(msize),
-                "-s", str(n),
-                "-r", str(n)
+                "-c", str(n)
             ])
             
             ssh_command = [
