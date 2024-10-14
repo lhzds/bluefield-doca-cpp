@@ -15,21 +15,21 @@ public:
     using CustomRecvCb = std::function<void()>;
 
     struct Cfg {
-        size_t recv_task_num{};
+        size_t m_recv_task_num{};
     };
     struct Cap {
-        uint32_t max_recv_task_num{};
-        uint32_t max_buf_len{};
+        uint32_t m_max_recv_task_num{};
+        uint32_t m_max_buf_len{};
     };
 
     Consumer(doca_comch_connection *peer_conn, doca_pe *pe,
         doca_pe *conn_pe, doca_mmap *mmap, doca_dev *dev, const Cfg &cfg);
     ~Consumer() = default;
 
-    bool is_connected() const { return state == DOCA_CTX_STATE_RUNNING; }
+    bool is_connected() const { return m_state == DOCA_CTX_STATE_RUNNING; }
 
-    Cap cap{};
-    doca_comch_consumer *inner{};
+    Cap m_cap{};
+    doca_comch_consumer *m_inner{};
 
     CustomRecvCb custom_recv_cb{[] {}};
     CustomRecvCb custom_recv_error_cb{[] {

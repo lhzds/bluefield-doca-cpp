@@ -88,8 +88,8 @@ int main(int argc, char **argv) {
         max_send_task_num);
     docacxx::BufInventory recv_buf_inv(dev, max_recv_task_num * msg_size,
         max_recv_task_num);
-    for (size_t i{}; i < send_buf_inv.len; ++i) {
-        send_buf_inv.mem[i] = i % 100;
+    for (size_t i{}; i < send_buf_inv.m_size; ++i) {
+        send_buf_inv.m_mem[i] = i % 100;
     }
 
     // create buffers
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
     }
 
     // create context
-    HostEnd host_end(SERVER_NAME, dev, recv_buf_inv.mmap, max_send_task_num, max_recv_task_num);
+    HostEnd host_end(SERVER_NAME, dev, recv_buf_inv.m_mmap, max_send_task_num, max_recv_task_num);
 
     // send bench
     host_end.send(send_bufs);

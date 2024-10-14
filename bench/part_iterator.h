@@ -8,22 +8,22 @@
 class PartIterator {
 public:
     PartIterator(size_t total_size, size_t part_size)
-        :total_size_{total_size}, part_size_{part_size}, next_part_{} {}
+        :m_total_size{total_size}, m_part_size{part_size}, m_next_part{} {}
     std::pair<size_t, size_t> next() {
         if (not has_next()) {
             throw std::out_of_range("no more part");
         }
-        auto offset = next_part_ * part_size_;
-        ++next_part_;
-        auto len = (total_size_ - offset) < part_size_ ? total_size_ - offset : part_size_;
+        auto offset = m_next_part * m_part_size;
+        ++m_next_part;
+        auto len = (m_total_size - offset) < m_part_size ? m_total_size - offset : m_part_size;
         return {offset, len};
     }
     bool has_next() const {
-        return next_part_ * part_size_ < total_size_;
+        return m_next_part * m_part_size < m_total_size;
     }
 
 private:
-    size_t total_size_{};
-    size_t part_size_{};
-    size_t next_part_{};
+    size_t m_total_size{};
+    size_t m_part_size{};
+    size_t m_next_part{};
 };

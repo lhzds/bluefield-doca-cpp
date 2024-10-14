@@ -10,55 +10,55 @@ public:
     ErasureCoder(doca_dev *dev, doca_ec_matrix_type mat_type,
         size_t data_block_count, size_t rdnc_block_count,
         size_t doca_max_create_task_num, size_t doca_max_recover_task_num)
-        : doca_max_create_task_num_(doca_max_create_task_num), doca_max_recover_task_num_(doca_max_recover_task_num) {
-        docacxx::check_derr(doca_pe_create(&pe_), "failed to create pe");
+        : m_doca_max_create_task_num(doca_max_create_task_num), m_doca_max_recover_task_num(doca_max_recover_task_num) {
+        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
         docacxx::Ec::Cfg cfg;
-        cfg.create_task_num = doca_max_create_task_num;
-        cfg.recover_task_num = doca_max_recover_task_num;
-        ec_ = std::make_unique<docacxx::Ec>(pe_, dev, cfg);
+        cfg.m_create_task_num = doca_max_create_task_num;
+        cfg.m_recover_task_num = doca_max_recover_task_num;
+        m_inner = std::make_unique<docacxx::Ec>(m_pe, dev, cfg);
 
-        ec_->custom_create_cb = [&](doca_data task_user_data) {
-            if (not create_wait_queue_.empty()) {
-                auto [src_buf, dst_buf] = create_wait_queue_.front();
-                create_wait_queue_.pop();
-                auto *task = ec_->alloc_create_task(create_matrix_, src_buf, dst_buf);
-                ec_->submit(task);
+        m_inner->m_custom_create_cb = [&](doca_data task_user_data) {
+            if (not m_create_wait_queue.empty()) {
+                auto [src_buf, dst_buf] = m_create_wait_queue.front();
+                m_create_wait_queue.pop();
+                auto *task = m_inner->alloc_create_task(m_create_matrix, src_buf, dst_buf);
+                m_inner->submit(task);
             }
 
-            ++create_finished_count_;
+            ++m_create_finished_count;
         };
-        ec_->custom_recover_cb = [&](doca_data task_user_data) {
-            if (not recover_wait_queue_.empty()) {
-                auto [recover_matrix, src_buf, dst_buf] = recover_wait_queue_.front();
-                recover_wait_queue_.pop();
-                auto *task = ec_->alloc_recover_task(recover_matrix, src_buf, dst_buf);
-                ec_->submit(task);
+        m_inner->m_custom_recover_cb = [&](doca_data task_user_data) {
+            if (not m_recover_wait_queue.empty()) {
+                auto [recover_matrix, src_buf, dst_buf] = m_recover_wait_queue.front();
+                m_recover_wait_queue.pop();
+                auto *task = m_inner->alloc_recover_task(recover_matrix, src_buf, dst_buf);
+                m_inner->submit(task);
             }
 
-            ++recover_finished_count_;
+            ++m_recover_finished_count;
         };
 
-        ec_->start();
-        while (ec_->state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(pe_);
+        m_inner->start();
+        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
+            doca_pe_progress(m_pe);
         }
 
-        create_matrix_ = ec_->create_matrix(mat_type, data_block_count,
+        m_create_matrix = m_inner->create_matrix(mat_type, data_block_count,
             rdnc_block_count);
         assert(matrix_);
     }
 
     ~ErasureCoder() {
-        ec_->destroy_matrix(create_matrix_);
+        m_inner->destroy_matrix(m_create_matrix);
 
-        ec_->stop();
-        while (ec_->state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(pe_);
+        m_inner->stop();
+        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
+            doca_pe_progress(m_pe);
         }
-        ec_->clean();
+        m_inner->clean();
 
-        auto result = doca_pe_destroy(pe_);
+        auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
             std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
@@ -68,21 +68,21 @@ public:
         std::vector<std::unique_ptr<docacxx::Buffer>> &dst) {
         assert(src.size() == dst.size());
 
-        create_finished_count_ = 0;
+        m_create_finished_count = 0;
 
-        for (size_t i{}; i < std::min(src.size(), doca_max_create_task_num_); ++i) {
-            auto *task = ec_->alloc_create_task(create_matrix_, src[i]->buf, dst[i]->buf);
+        for (size_t i{}; i < std::min(src.size(), m_doca_max_create_task_num); ++i) {
+            auto *task = m_inner->alloc_create_task(m_create_matrix, src[i]->m_inner, dst[i]->m_inner);
             assert(task);
-            ec_->submit(task);
+            m_inner->submit(task);
         }
 
-        if (src.size() > doca_max_create_task_num_) {
-            for (size_t i = doca_max_create_task_num_; i < src.size(); ++i) {
-                create_wait_queue_.emplace(src[i]->buf, dst[i]->buf);
+        if (src.size() > m_doca_max_create_task_num) {
+            for (size_t i = m_doca_max_create_task_num; i < src.size(); ++i) {
+                m_create_wait_queue.emplace(src[i]->m_inner, dst[i]->m_inner);
             }
         }
-        while (create_finished_count_ < src.size()) {
-            doca_pe_progress(pe_);
+        while (m_create_finished_count < src.size()) {
+            doca_pe_progress(m_pe);
         }
     }
 
@@ -91,38 +91,38 @@ public:
         std::vector<uint32_t> &missing_indices) {
         assert(src.size() == dst.size());
 
-        recover_finished_count_ = 0;
-        doca_ec_matrix *recover_matrix = ec_->create_recover_matrix(create_matrix_, missing_indices);
+        m_recover_finished_count = 0;
+        doca_ec_matrix *recover_matrix = m_inner->create_recover_matrix(m_create_matrix, missing_indices);
         assert(recover_matrix);
 
-        for (size_t i{}; i < std::min(src.size(), doca_max_recover_task_num_); ++i) {
-            auto *task = ec_->alloc_recover_task(recover_matrix, src[i]->buf, dst[i]->buf);
+        for (size_t i{}; i < std::min(src.size(), m_doca_max_recover_task_num); ++i) {
+            auto *task = m_inner->alloc_recover_task(recover_matrix, src[i]->m_inner, dst[i]->m_inner);
             assert(task);
-            ec_->submit(task);
+            m_inner->submit(task);
         }
 
-        if (src.size() > doca_max_recover_task_num_) {
-            for (size_t i = doca_max_recover_task_num_; i < src.size(); ++i) {
-                recover_wait_queue_.emplace(recover_matrix, src[i]->buf, dst[i]->buf);
+        if (src.size() > m_doca_max_recover_task_num) {
+            for (size_t i = m_doca_max_recover_task_num; i < src.size(); ++i) {
+                m_recover_wait_queue.emplace(recover_matrix, src[i]->m_inner, dst[i]->m_inner);
             }
         }
 
-        while (recover_finished_count_ != src.size()) {
-            doca_pe_progress(pe_);
+        while (m_recover_finished_count != src.size()) {
+            doca_pe_progress(m_pe);
         }
-        ec_->destroy_matrix(recover_matrix);
+        m_inner->destroy_matrix(recover_matrix);
     }
 
 private:
-    doca_pe *pe_{};
-    std::unique_ptr<docacxx::Ec> ec_;
+    doca_pe *m_pe{};
+    std::unique_ptr<docacxx::Ec> m_inner;
 
-    doca_ec_matrix *create_matrix_{};
-    size_t create_finished_count_{};
-    size_t doca_max_create_task_num_{};
-    std::queue<std::pair<const doca_buf *, doca_buf *>> create_wait_queue_;
+    doca_ec_matrix *m_create_matrix{};
+    size_t m_create_finished_count{};
+    size_t m_doca_max_create_task_num{};
+    std::queue<std::pair<const doca_buf *, doca_buf *>> m_create_wait_queue;
 
-    size_t recover_finished_count_{};
-    size_t doca_max_recover_task_num_{};
-    std::queue<std::tuple<doca_ec_matrix *, const doca_buf *, doca_buf *>> recover_wait_queue_;
+    size_t m_recover_finished_count{};
+    size_t m_doca_max_recover_task_num{};
+    std::queue<std::tuple<doca_ec_matrix *, const doca_buf *, doca_buf *>> m_recover_wait_queue;
 };

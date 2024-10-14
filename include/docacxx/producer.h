@@ -14,22 +14,22 @@ public:
     using CustomSendCb = std::function<void()>;
 
     struct Cfg {
-        size_t send_task_num{};
+        size_t m_send_task_num{};
     };
     struct Cap {
-        uint32_t max_send_task_num{};
-        uint32_t max_buf_len{};
+        uint32_t m_max_send_task_num{};
+        uint32_t m_max_buf_len{};
     };
 
     Producer(doca_comch_connection *peer_conn, doca_pe *pe,
         doca_dev *dev, const Cfg &cfg);
     ~Producer() = default;
 
-    Cap cap{};
-    doca_comch_producer *inner{};
+    Cap m_cap{};
+    doca_comch_producer *m_inner{};
 
-    CustomSendCb custom_send_cb{[] {}};
-    CustomSendCb custom_send_error_cb{[] {
+    CustomSendCb m_custom_send_cb{[] {}};
+    CustomSendCb m_custom_send_error_cb{[] {
         throw std::runtime_error("producer send error");
     }};
     

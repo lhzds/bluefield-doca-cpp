@@ -12,269 +12,269 @@ class SyncConsumer {
 public:
     SyncConsumer(doca_comch_connection *peer_conn, doca_pe *conn_pe,
         doca_mmap *mmap, doca_dev *dev, size_t doca_max_recv_task_num)
-        :doca_max_recv_task_num_{doca_max_recv_task_num} {
-        docacxx::check_derr(doca_pe_create(&pe_), "failed to create pe");
+        :m_doca_max_recv_task_num{doca_max_recv_task_num} {
+        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
         docacxx::Consumer::Cfg cfg;
-        cfg.recv_task_num = doca_max_recv_task_num;
+        cfg.m_recv_task_num = doca_max_recv_task_num;
 
-        inner_ = std::make_unique<docacxx::Consumer>(peer_conn, pe_,
+        m_inner = std::make_unique<docacxx::Consumer>(peer_conn, m_pe,
             conn_pe, mmap, dev, cfg);
-        inner_->custom_recv_cb = [&]() {
-            if (not wait_queue_.empty()) {
-                auto buf = wait_queue_.front();
-                wait_queue_.pop();
-                auto *task = inner_->alloc_recv_task(buf);
-                inner_->submit(task);
+        m_inner->custom_recv_cb = [&]() {
+            if (not m_wait_queue.empty()) {
+                auto buf = m_wait_queue.front();
+                m_wait_queue.pop();
+                auto *task = m_inner->alloc_recv_task(buf);
+                m_inner->submit(task);
             }
 
-            ++finished_;
+            ++m_finished;
         };
 
-        inner_->start();
-        while (inner_->state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(pe_);
+        m_inner->start();
+        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
+            doca_pe_progress(m_pe);
             doca_pe_progress(conn_pe);
         }
     }
 
     ~SyncConsumer() {
-        inner_->stop();
-        while (inner_->state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(pe_);
+        m_inner->stop();
+        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
+            doca_pe_progress(m_pe);
         }
-        inner_->clean();
+        m_inner->clean();
 
-        auto result = doca_pe_destroy(pe_);
+        auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
             std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 
     void recv(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
-        finished_ = 0;
+        m_finished = 0;
 
-        for (size_t i{}; i < std::min(bufs.size(), doca_max_recv_task_num_); ++i) {
-            auto *task = inner_->alloc_recv_task(bufs[i]->buf);
-            inner_->submit(task);
+        for (size_t i{}; i < std::min(bufs.size(), m_doca_max_recv_task_num); ++i) {
+            auto *task = m_inner->alloc_recv_task(bufs[i]->m_inner);
+            m_inner->submit(task);
         }
 
-        if (bufs.size() > doca_max_recv_task_num_) {
-            for (size_t i = doca_max_recv_task_num_; i < bufs.size(); ++i) {
-                wait_queue_.emplace(bufs[i]->buf);
+        if (bufs.size() > m_doca_max_recv_task_num) {
+            for (size_t i = m_doca_max_recv_task_num; i < bufs.size(); ++i) {
+                m_wait_queue.emplace(bufs[i]->m_inner);
             }
         }
-        while (finished_ != bufs.size()) {
-            doca_pe_progress(pe_);
+        while (m_finished != bufs.size()) {
+            doca_pe_progress(m_pe);
         }
     }
 
 protected:
-    doca_pe *pe_{};
-    size_t doca_max_recv_task_num_{};
-    std::unique_ptr<docacxx::Consumer> inner_;
-    size_t finished_{};
-    std::queue<doca_buf *> wait_queue_;
+    doca_pe *m_pe{};
+    size_t m_doca_max_recv_task_num{};
+    std::unique_ptr<docacxx::Consumer> m_inner;
+    size_t m_finished{};
+    std::queue<doca_buf *> m_wait_queue;
 };
 
 class SyncProducer {
 public:
     SyncProducer(doca_comch_connection *peer_conn, doca_dev *dev,
         size_t doca_max_send_task_num, size_t consumer_id)
-        :doca_max_send_task_num_{doca_max_send_task_num}, consumer_id_{consumer_id} {
-        docacxx::check_derr(doca_pe_create(&pe_), "failed to create pe");
+        :m_doca_max_send_task_num{doca_max_send_task_num}, m_consumer_id{consumer_id} {
+        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
         docacxx::Producer::Cfg cfg;
-        cfg.send_task_num = doca_max_send_task_num;
+        cfg.m_send_task_num = doca_max_send_task_num;
 
-        inner_ = std::make_unique<docacxx::Producer>(peer_conn, pe_, dev, cfg);
-        inner_->custom_send_cb = [&]() {
-            if (not wait_queue_.empty()) {
-                auto buf = wait_queue_.front();
-                wait_queue_.pop();
-                auto *task = inner_->alloc_send_task(buf, nullptr, 0, consumer_id_);
-                while (not inner_->submit(task)) {
-                    doca_pe_progress(pe_);
+        m_inner = std::make_unique<docacxx::Producer>(peer_conn, m_pe, dev, cfg);
+        m_inner->m_custom_send_cb = [&]() {
+            if (not m_wait_queue.empty()) {
+                auto buf = m_wait_queue.front();
+                m_wait_queue.pop();
+                auto *task = m_inner->alloc_send_task(buf, nullptr, 0, m_consumer_id);
+                while (not m_inner->submit(task)) {
+                    doca_pe_progress(m_pe);
                 }
             }
 
-            ++finished_;
+            ++m_finished;
         };
 
-        inner_->start();
-        while (inner_->state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(pe_);
+        m_inner->start();
+        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
+            doca_pe_progress(m_pe);
         }
     }
 
     ~SyncProducer() {
-        inner_->stop();
-        while (inner_->state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(pe_);
+        m_inner->stop();
+        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
+            doca_pe_progress(m_pe);
         }
-        inner_->clean();
+        m_inner->clean();
 
-        auto result = doca_pe_destroy(pe_);
+        auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
             std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 
     void send(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
-        finished_ = 0;
+        m_finished = 0;
 
-        for (size_t i{}; i < std::min(bufs.size(), doca_max_send_task_num_); ++i) {
-            auto *task = inner_->alloc_send_task(bufs[i]->buf, nullptr, 0, consumer_id_);
-            while (not inner_->submit(task)) {
-                doca_pe_progress(pe_);
+        for (size_t i{}; i < std::min(bufs.size(), m_doca_max_send_task_num); ++i) {
+            auto *task = m_inner->alloc_send_task(bufs[i]->m_inner, nullptr, 0, m_consumer_id);
+            while (not m_inner->submit(task)) {
+                doca_pe_progress(m_pe);
             }
         }
 
-        if (bufs.size() > doca_max_send_task_num_) {
-            for (size_t i = doca_max_send_task_num_; i < bufs.size(); ++i) {
-                wait_queue_.emplace(bufs[i]->buf);
+        if (bufs.size() > m_doca_max_send_task_num) {
+            for (size_t i = m_doca_max_send_task_num; i < bufs.size(); ++i) {
+                m_wait_queue.emplace(bufs[i]->m_inner);
             }
         }
-        while (finished_ != bufs.size()) {
-            doca_pe_progress(pe_);
+        while (m_finished != bufs.size()) {
+            doca_pe_progress(m_pe);
         }
     }
 
 protected:
-    doca_pe *pe_{};
-    size_t doca_max_send_task_num_{};
-    std::unique_ptr<docacxx::Producer> inner_;
-    size_t finished_{};
-    size_t consumer_id_{};
-    std::queue<doca_buf *> wait_queue_;
+    doca_pe *m_pe{};
+    size_t m_doca_max_send_task_num{};
+    std::unique_ptr<docacxx::Producer> m_inner;
+    size_t m_finished{};
+    size_t m_consumer_id{};
+    std::queue<doca_buf *> m_wait_queue;
 };
 
 class DpuEnd {
 public:
     DpuEnd(std::string_view name, doca_dev *dev, doca_dev_rep *dev_rep,
         doca_mmap *recv_mmap, size_t doca_max_send_task_num, size_t doca_max_recv_task_num)
-        :recv_mmap_{recv_mmap}, doca_max_send_task_num_{doca_max_send_task_num}, doca_max_recv_task_num_{doca_max_recv_task_num} {
-        docacxx::check_derr(doca_pe_create(&pe_), "failed to create pe");
+        :m_recv_mmap{recv_mmap}, m_doca_max_send_task_num{doca_max_send_task_num}, m_doca_max_recv_task_num{doca_max_recv_task_num} {
+        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
-        inner_ = std::make_unique<docacxx::Server>(name.data(), dev, dev_rep, pe_, docacxx::Server::Cfg{});
+        m_inner = std::make_unique<docacxx::Server>(name.data(), dev, dev_rep, m_pe, docacxx::Server::Cfg{});
         
-        inner_->custom_new_conn_cb = [&](doca_comch_connection *conn) {
-            peer_conn_ = conn;
+        m_inner->m_custom_new_conn_cb = [&](doca_comch_connection *conn) {
+            m_peer_conn = conn;
         };
 
-        inner_->custom_new_consumer_cb = [&](doca_comch_connection *conn, uint32_t id) {
-            host_consumer_id_ = id;
+        m_inner->m_custom_new_consumer_cb = [&](doca_comch_connection *conn, uint32_t id) {
+            m_host_consumer_id = id;
         };
 
-        inner_->start();
-        while (inner_->state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(pe_);
+        m_inner->start();
+        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
+            doca_pe_progress(m_pe);
         }
 
-        while (not host_consumer_id_) {
-            doca_pe_progress(pe_);
+        while (not m_host_consumer_id) {
+            doca_pe_progress(m_pe);
         }
-        consumer_ = std::make_unique<SyncConsumer>(peer_conn_, pe_, recv_mmap_, dev, doca_max_recv_task_num);
-        producer_ = std::make_unique<SyncProducer>(peer_conn_, dev, doca_max_send_task_num, *host_consumer_id_);
+        m_consumer = std::make_unique<SyncConsumer>(m_peer_conn, m_pe, m_recv_mmap, dev, doca_max_recv_task_num);
+        m_producer = std::make_unique<SyncProducer>(m_peer_conn, dev, doca_max_send_task_num, *m_host_consumer_id);
     }
 
     ~DpuEnd() {
-        producer_.reset();
-        consumer_.reset();
+        m_producer.reset();
+        m_consumer.reset();
 
-        inner_->stop();
-        while (inner_->state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(pe_);
+        m_inner->stop();
+        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
+            doca_pe_progress(m_pe);
         }
-        inner_->clean();
+        m_inner->clean();
 
-        auto result = doca_pe_destroy(pe_);
+        auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
             std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 
     void send(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
-        producer_->send(bufs);
+        m_producer->send(bufs);
     }
     void recv(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
-        consumer_->recv(bufs);
+        m_consumer->recv(bufs);
     }
 
 private:
-    doca_mmap *recv_mmap_;
-    size_t doca_max_send_task_num_;
-    size_t doca_max_recv_task_num_;
+    doca_mmap *m_recv_mmap;
+    size_t m_doca_max_send_task_num;
+    size_t m_doca_max_recv_task_num;
 
-    doca_pe *pe_;
-    std::unique_ptr<docacxx::Server> inner_;
-    doca_comch_connection *peer_conn_{};
+    doca_pe *m_pe;
+    std::unique_ptr<docacxx::Server> m_inner;
+    doca_comch_connection *m_peer_conn{};
 
-    std::optional<size_t> host_consumer_id_;
-    std::unique_ptr<SyncProducer> producer_;
-    std::unique_ptr<SyncConsumer> consumer_;
+    std::optional<size_t> m_host_consumer_id;
+    std::unique_ptr<SyncProducer> m_producer;
+    std::unique_ptr<SyncConsumer> m_consumer;
 };
 
 class HostEnd {
 public:
     HostEnd(std::string_view server_name, doca_dev *dev,
         doca_mmap *recv_mmap, size_t doca_max_send_task_num, size_t doca_max_recv_task_num)
-        :recv_mmap_{recv_mmap}, doca_max_send_task_num_{doca_max_send_task_num}, doca_max_recv_task_num_{doca_max_recv_task_num} {
-        docacxx::check_derr(doca_pe_create(&pe_), "failed to create pe");
+        :m_recv_mmap{recv_mmap}, m_doca_max_send_task_num{doca_max_send_task_num}, m_doca_max_recv_task_num{doca_max_recv_task_num} {
+        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
-        inner_ = std::make_unique<docacxx::Client>(server_name.data(), dev, pe_, docacxx::Client::Cfg{});
+        m_inner = std::make_unique<docacxx::Client>(server_name.data(), dev, m_pe, docacxx::Client::Cfg{});
 
-        inner_->custom_new_consumer_cb = [&](doca_comch_connection *conn, uint32_t id) {
-            dpu_consumer_id_ = id;
+        m_inner->m_custom_new_consumer_cb = [&](doca_comch_connection *conn, uint32_t id) {
+            m_dpu_consumer_id = id;
         };
 
-        inner_->start();
-        while (inner_->state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(pe_);
+        m_inner->start();
+        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
+            doca_pe_progress(m_pe);
         }
 
-        peer_conn_ = inner_->get_connection();
+        m_peer_conn = m_inner->get_connection();
 
-        consumer_ = std::make_unique<SyncConsumer>(peer_conn_, pe_, recv_mmap_, dev, doca_max_recv_task_num);
-        while (not dpu_consumer_id_) {
-            doca_pe_progress(pe_);
+        m_consumer = std::make_unique<SyncConsumer>(m_peer_conn, m_pe, m_recv_mmap, dev, doca_max_recv_task_num);
+        while (not m_dpu_consumer_id) {
+            doca_pe_progress(m_pe);
         }
-        producer_ = std::make_unique<SyncProducer>(peer_conn_, dev, doca_max_send_task_num, *dpu_consumer_id_);
+        m_producer = std::make_unique<SyncProducer>(m_peer_conn, dev, doca_max_send_task_num, *m_dpu_consumer_id);
     }
 
     ~HostEnd() {
-        producer_.reset();
-        consumer_.reset();
+        m_producer.reset();
+        m_consumer.reset();
 
-        inner_->stop();
-        while (inner_->state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(pe_);
+        m_inner->stop();
+        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
+            doca_pe_progress(m_pe);
         }
-        inner_->clean();
+        m_inner->clean();
 
-        auto result = doca_pe_destroy(pe_);
+        auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
             std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 
     void send(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
-        producer_->send(bufs);
+        m_producer->send(bufs);
     }
     void recv(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
-        consumer_->recv(bufs);
+        m_consumer->recv(bufs);
     }
 
 private:
-    doca_mmap *recv_mmap_;
-    size_t doca_max_send_task_num_;
-    size_t doca_max_recv_task_num_;
+    doca_mmap *m_recv_mmap;
+    size_t m_doca_max_send_task_num;
+    size_t m_doca_max_recv_task_num;
 
-    doca_pe *pe_;
-    std::unique_ptr<docacxx::Client> inner_;
-    doca_comch_connection *peer_conn_{};
+    doca_pe *m_pe;
+    std::unique_ptr<docacxx::Client> m_inner;
+    doca_comch_connection *m_peer_conn{};
 
-    std::optional<size_t> dpu_consumer_id_;
-    std::unique_ptr<SyncProducer> producer_;
-    std::unique_ptr<SyncConsumer> consumer_;
+    std::optional<size_t> m_dpu_consumer_id;
+    std::unique_ptr<SyncProducer> m_producer;
+    std::unique_ptr<SyncConsumer> m_consumer;
 };

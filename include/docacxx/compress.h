@@ -11,13 +11,13 @@ public:
     using CustomCompressCb = std::function<void(doca_data)>;
 
     struct Cfg {
-        size_t decompress_task_num{};
+        size_t m_decompress_task_num{};
     };
 
     Compress(doca_pe *pe, doca_dev *dev, const Cfg &cfg);
     virtual ~Compress() = default;
 
-    doca_compress *inner{};
+    doca_compress *m_inner{};
 
     CustomCompressCb custom_decompress_cb{[](doca_data task_user_data) {}};
     CustomCompressCb custom_decompress_error_cb{[](doca_data task_user_data) {}};

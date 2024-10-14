@@ -10,22 +10,22 @@ public:
     using CustomEcCb = std::function<void(doca_data)>;
 
     struct Cfg {
-        size_t create_task_num{};
-        size_t update_task_num{};
-        size_t recover_task_num{};
+        size_t m_create_task_num{};
+        size_t m_update_task_num{};
+        size_t m_recover_task_num{};
     };
 
     Ec(doca_pe *pe, doca_dev *dev, const Cfg &cfg);
     virtual ~Ec() = default;
 
-    doca_ec *inner{};
+    doca_ec *m_inner{};
 
-    CustomEcCb custom_create_cb{[](doca_data) {}};
-    CustomEcCb custom_create_error_cb{[](doca_data) {}};
-    CustomEcCb custom_update_cb{[](doca_data) {}};
-    CustomEcCb custom_update_error_cb{[](doca_data) {}};
-    CustomEcCb custom_recover_cb{[](doca_data) {}};
-    CustomEcCb custom_recover_error_cb{[](doca_data) {}};
+    CustomEcCb m_custom_create_cb{[](doca_data) {}};
+    CustomEcCb m_custom_create_error_cb{[](doca_data) {}};
+    CustomEcCb m_custom_update_cb{[](doca_data) {}};
+    CustomEcCb m_custom_update_error_cb{[](doca_data) {}};
+    CustomEcCb m_custom_recover_cb{[](doca_data) {}};
+    CustomEcCb m_custom_recover_error_cb{[](doca_data) {}};
 
     doca_ec_matrix *create_matrix(doca_ec_matrix_type type,
         size_t data_block_count, size_t rdnc_block_count);

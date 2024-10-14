@@ -22,30 +22,30 @@ public:
         std::function<void(doca_comch_connection *, uint32_t)>;
 
     struct Cfg {
-        size_t max_send_task_num{1};
+        size_t m_max_send_task_num{1};
         // size_t max_msg_size{};
         // size_t max_recv_queue_size{};
     };
 
-    doca_dev *dev{};
-    doca_dev_rep *dev_rep{};
-    doca_comch_server *inner{};
+    doca_dev *m_dev{};
+    doca_dev_rep *m_dev_rep{};
+    doca_comch_server *m_inner{};
 
     Server(
         std::string_view name,
         doca_dev *dev, doca_dev_rep *dev_rep, doca_pe *pe, const Cfg &cfg);
 
-    CustomSendCb custom_send_cb{[] {}};
-    CustomSendCb custom_send_error_cb{[] {
+    CustomSendCb m_custom_send_cb{[] {}};
+    CustomSendCb m_custom_send_error_cb{[] {
         throw std::runtime_error("client send error.");
     }};
-    CustomRecvCb custom_recv_cb{[](uint8_t *, uint32_t, doca_comch_connection *) {}};
-    CustomConnCb custom_new_conn_cb{[](doca_comch_connection *) {}};
-    CustomConnCb custom_disconn_cb{[](doca_comch_connection *) {
+    CustomRecvCb m_custom_recv_cb{[](uint8_t *, uint32_t, doca_comch_connection *) {}};
+    CustomConnCb m_custom_new_conn_cb{[](doca_comch_connection *) {}};
+    CustomConnCb m_custom_disconn_cb{[](doca_comch_connection *) {
         throw std::runtime_error("peer is disconnected");
     }};
-    CustomConsumerCb custom_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
-    CustomConsumerCb custom_expired_consumer_cb{
+    CustomConsumerCb m_custom_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
+    CustomConsumerCb m_custom_expired_consumer_cb{
         [](doca_comch_connection *, uint32_t id) {
             throw std::runtime_error(
                 fmt::format("consumer with ID=[{}] is expired.", id));

@@ -21,29 +21,28 @@ public:
         std::function<void(doca_comch_connection *, uint32_t)>;
 
     struct Cfg {
-        size_t max_send_task_num{1};
+        size_t m_max_send_task_num{1};
         // size_t max_msg_size{};
         // size_t max_recv_queue_size{};
     };
 
-    doca_dev *dev{};
-    doca_comch_client *client{};
+    doca_dev *m_dev{};
+    doca_comch_client *m_inner{};
 
     Client(std::string_view server_name,
         doca_dev *dev, doca_pe *pe , const Cfg &cfg);
-    
     void clean_impl() override;
 
     doca_comch_connection *get_connection();
-    bool is_connected() const { return state == DOCA_CTX_STATE_RUNNING; }
+    bool is_connected() const { return m_state == DOCA_CTX_STATE_RUNNING; }
 
-    CustomSendCb custom_send_cb{[] {}};
-    CustomSendCb custom_send_error_cb{[] {
+    CustomSendCb m_custom_send_cb{[] {}};
+    CustomSendCb m_custom_send_error_cb{[] {
         throw std::runtime_error("client send error.");
     }};
-    CustomRecvCb custom_recv_cb{[](uint8_t *, uint32_t, doca_comch_connection *) {}};
-    CustomConsumerCb custom_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
-    CustomConsumerCb custom_expired_consumer_cb{
+    CustomRecvCb m_custom_recv_cb{[](uint8_t *, uint32_t, doca_comch_connection *) {}};
+    CustomConsumerCb m_custom_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
+    CustomConsumerCb m_custom_expired_consumer_cb{
         [](doca_comch_connection *, uint32_t id) {
             throw std::runtime_error(
                 fmt::format("consumer with ID=[{}] is expired.", id));

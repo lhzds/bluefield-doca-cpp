@@ -14,33 +14,33 @@
 class Compressor {
 public:
     Compressor(size_t doca_max_decompress_task_num)
-        :doca_max_decompress_task_num_{doca_max_decompress_task_num} {}
+        :m_doca_max_decompress_task_num{doca_max_decompress_task_num} {}
 
     void init() {
-        decompressor_->custom_decompress_cb = [&](doca_data task_user_data) {
-            if (not wait_queue_.empty()) {
-                auto [src_buf, dst_buf] = wait_queue_.front();
-                wait_queue_.pop();
-                auto *task = decompressor_->alloc_decompress_task(src_buf, dst_buf);
-                decompressor_->submit(task);
+        m_decompressor->custom_decompress_cb = [&](doca_data task_user_data) {
+            if (not m_wait_queue.empty()) {
+                auto [src_buf, dst_buf] = m_wait_queue.front();
+                m_wait_queue.pop();
+                auto *task = m_decompressor->alloc_decompress_task(src_buf, dst_buf);
+                m_decompressor->submit(task);
             }
 
-            ++finished_;
+            ++m_finished;
         };
-        decompressor_->start();
-        while (decompressor_->state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(pe_);
+        m_decompressor->start();
+        while (m_decompressor->m_state != DOCA_CTX_STATE_RUNNING) {
+            doca_pe_progress(m_pe);
         }
     }
 
     virtual ~Compressor() {
-        decompressor_->stop();
-        while (decompressor_->state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(pe_);
+        m_decompressor->stop();
+        while (m_decompressor->m_state != DOCA_CTX_STATE_IDLE) {
+            doca_pe_progress(m_pe);
         }
-        decompressor_->clean();
+        m_decompressor->clean();
 
-        auto result = doca_pe_destroy(pe_);
+        auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
             std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
@@ -51,42 +51,42 @@ public:
 
     void decompress(const std::vector<std::unique_ptr<docacxx::Buffer>> &src,
         std::vector<std::unique_ptr<docacxx::Buffer>> &dst) {
-        finished_ = 0;
+        m_finished = 0;
         assert(src.size() == dst.size());
 
-        for (size_t i{}; i < std::min(src.size(), doca_max_decompress_task_num_); ++i) {
-            auto *task = decompressor_->alloc_decompress_task(src[i]->buf, dst[i]->buf);
-            decompressor_->submit(task);
+        for (size_t i{}; i < std::min(src.size(), m_doca_max_decompress_task_num); ++i) {
+            auto *task = m_decompressor->alloc_decompress_task(src[i]->m_inner, dst[i]->m_inner);
+            m_decompressor->submit(task);
         }
 
-        if (src.size() > doca_max_decompress_task_num_) {
-            for (size_t i = doca_max_decompress_task_num_; i < src.size(); ++i) {
-                wait_queue_.emplace(src[i]->buf, dst[i]->buf);
+        if (src.size() > m_doca_max_decompress_task_num) {
+            for (size_t i = m_doca_max_decompress_task_num; i < src.size(); ++i) {
+                m_wait_queue.emplace(src[i]->m_inner, dst[i]->m_inner);
             }
         }
-        while (finished_ != src.size()) {
-            doca_pe_progress(pe_);
+        while (m_finished != src.size()) {
+            doca_pe_progress(m_pe);
         }
     }
 
 protected:
-    doca_pe *pe_{};
-    size_t doca_max_decompress_task_num_{};
-    std::unique_ptr<docacxx::Compress> decompressor_;
-    size_t finished_{};
-    std::queue<std::pair<const doca_buf *, doca_buf *>> wait_queue_;
+    doca_pe *m_pe{};
+    size_t m_doca_max_decompress_task_num{};
+    std::unique_ptr<docacxx::Compress> m_decompressor;
+    size_t m_finished{};
+    std::queue<std::pair<const doca_buf *, doca_buf *>> m_wait_queue;
 };
 
 class Lz4Compressor: public Compressor {
 public:
     Lz4Compressor(doca_dev *dev, size_t doca_max_decompress_task_num)
         :Compressor(doca_max_decompress_task_num) {
-        docacxx::check_derr(doca_pe_create(&pe_), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
         docacxx::Compress::Cfg cfg;
-        cfg.decompress_task_num = doca_max_decompress_task_num;
+        cfg.m_decompress_task_num = doca_max_decompress_task_num;
 
-        decompressor_ = std::make_unique<docacxx::Lz4Compress>(pe_, dev, cfg);
+        m_decompressor = std::make_unique<docacxx::Lz4Compress>(m_pe, dev, cfg);
         init();
     }
 
@@ -103,12 +103,12 @@ class DeflateCompressor: public Compressor {
 public:
     DeflateCompressor(doca_dev *dev, size_t doca_max_decompress_task_num)
         :Compressor(doca_max_decompress_task_num) {
-        docacxx::check_derr(doca_pe_create(&pe_), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
         docacxx::Compress::Cfg cfg;
-        cfg.decompress_task_num = doca_max_decompress_task_num;
+        cfg.m_decompress_task_num = doca_max_decompress_task_num;
 
-        decompressor_ = std::make_unique<docacxx::DeflateCompress>(pe_, dev, cfg);
+        m_decompressor = std::make_unique<docacxx::DeflateCompress>(m_pe, dev, cfg);
         init();
     }
 

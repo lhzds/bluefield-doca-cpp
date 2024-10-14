@@ -9,17 +9,17 @@ Client::Client(
     std::string_view server_name,
     doca_dev *dev, doca_pe *pe, const Cfg &cfg) {
     check_derr(
-        doca_comch_client_create(dev, server_name.data(), &client),
+        doca_comch_client_create(dev, server_name.data(), &m_inner),
         "failed to create client");    
-    init_ctx(doca_comch_client_as_ctx(client), pe);
+    init_ctx(doca_comch_client_as_ctx(m_inner), pe);
 
     check_derr(doca_comch_client_event_consumer_register(
-            client, new_consumer_cb, expired_consumer_cb),
+            m_inner, new_consumer_cb, expired_consumer_cb),
         "failed to register consumer event");
 
-    check_derr(doca_comch_client_task_send_set_conf(client, send_cb, send_error_cb, cfg.max_send_task_num),
+    check_derr(doca_comch_client_task_send_set_conf(m_inner, send_cb, send_error_cb, cfg.m_max_send_task_num),
         "failed to set send task conf");
-    check_derr(doca_comch_client_event_msg_recv_register(client, recv_cb),
+    check_derr(doca_comch_client_event_msg_recv_register(m_inner, recv_cb),
         "failed to register recv msg event");
 
     // check_derr(doca_comch_client_set_max_msg_size(client, 4080), "failed to
@@ -29,12 +29,12 @@ Client::Client(
 }
 
 void Client::clean_impl() {
-    auto result = doca_comch_client_destroy(client);
+    auto result = doca_comch_client_destroy(m_inner);
     if (result != DOCA_SUCCESS) {
         std::cerr << "Failed to destroy client properly with error = "
                   << doca_error_get_name(result) << std::endl;
     }
-    result = doca_dev_close(dev);
+    result = doca_dev_close(m_dev);
     if (result != DOCA_SUCCESS)
         std::cerr << "Failed to close dev properly with error = "
                   << doca_error_get_name(result) << std::endl;
@@ -43,7 +43,7 @@ void Client::clean_impl() {
 doca_comch_connection *Client::get_connection() {
     doca_comch_connection *conn{};
     check_derr(
-        doca_comch_client_get_connection(client, &conn),
+        doca_comch_client_get_connection(m_inner, &conn),
         "failed to get connection from client");
     return conn;
 }
@@ -63,7 +63,7 @@ void Client::new_consumer_cb(
     doca_comch_connection *comch_connection,
     uint32_t id) {
     auto *client = from_conn_to_client(comch_connection);
-    client->custom_new_consumer_cb(comch_connection, id);
+    client->m_custom_new_consumer_cb(comch_connection, id);
 }
 
 void Client::expired_consumer_cb(
@@ -71,7 +71,7 @@ void Client::expired_consumer_cb(
     doca_comch_connection *comch_connection,
     uint32_t id) {
     auto *client = from_conn_to_client(comch_connection);
-    client->custom_expired_consumer_cb(comch_connection, id);
+    client->m_custom_expired_consumer_cb(comch_connection, id);
 }
 
 void Client::send_cb(
@@ -80,7 +80,7 @@ void Client::send_cb(
     doca_data ctx_user_data) {
     doca_task_free(doca_comch_task_send_as_task(task));
     auto *client = (Client *)ctx_user_data.ptr;
-    client->custom_send_cb();
+    client->m_custom_send_cb();
 }
 
 void Client::send_error_cb(
@@ -89,7 +89,7 @@ void Client::send_error_cb(
     doca_data ctx_user_data) {
     doca_task_free(doca_comch_task_send_as_task(task));
     auto *client = (Client *)ctx_user_data.ptr;
-    client->custom_send_error_cb();
+    client->m_custom_send_error_cb();
 }
 
 void Client::recv_cb(
@@ -98,6 +98,6 @@ void Client::recv_cb(
     uint32_t msg_len,
     struct doca_comch_connection *comch_connection) {
     auto *client = from_conn_to_client(comch_connection);
-    client->custom_recv_cb(recv_buffer, msg_len, comch_connection);
+    client->m_custom_recv_cb(recv_buffer, msg_len, comch_connection);
 }
 }

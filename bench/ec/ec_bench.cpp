@@ -111,8 +111,8 @@ int main(int argc, char **argv) {
         max_create_task_num);
     docacxx::BufInventory dst_buf_inv(dev, max_create_task_num * (rdnc_block_count * block_size),
         max_create_task_num);
-    for (size_t i{}; i < src_buf_inv.len; ++i) {
-        src_buf_inv.mem[i] = random();
+    for (size_t i{}; i < src_buf_inv.m_size; ++i) {
+        src_buf_inv.m_mem[i] = random();
     }
 
     std::vector<std::unique_ptr<docacxx::Buffer>> src_bufs;
@@ -162,9 +162,9 @@ int main(int argc, char **argv) {
         available_bufs.emplace_back(available_buf_inv.get_buf(i * buf_len, buf_len));
         auto &buf = available_bufs.back();
         
-        std::memcpy(buf->mem, src_bufs[i]->mem, intact_block_count * block_size);
-        std::memcpy(buf->mem + intact_block_count * block_size,
-            dst_bufs[i]->mem, rdnc_block_count * block_size);
+        std::memcpy(buf->m_mem, src_bufs[i]->m_mem, intact_block_count * block_size);
+        std::memcpy(buf->m_mem + intact_block_count * block_size,
+            dst_bufs[i]->m_mem, rdnc_block_count * block_size);
         buf->set_doca_buf_data(buf_len);
     }
 
@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
     // test recover
     for (size_t i{}; i < max_recover_task_num; ++i) {
         std::string_view a = recovered_bufs[i]->get_doca_buf_data();
-        std::string_view b(src_bufs[i]->mem + intact_block_count * block_size,
+        std::string_view b(src_bufs[i]->m_mem + intact_block_count * block_size,
             rdnc_block_count * block_size);
         if (a != b) {
             std::cerr << "Failed to recover" << std::endl;
