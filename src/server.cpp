@@ -6,6 +6,7 @@
 #include <iostream>
 
 namespace docacxx {
+namespace comch {
 Server::Server(
     std::string_view name,
     doca_dev *dev, doca_dev_rep *dev_rep,
@@ -119,5 +120,6 @@ void Server::expired_consumer_cb(
     uint32_t id) {
     auto *server = from_conn_to_server(comch_connection);
     server->m_custom_expired_consumer_cb(comch_connection, id);
+}
 }
 }

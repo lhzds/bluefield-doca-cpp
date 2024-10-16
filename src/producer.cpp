@@ -7,6 +7,7 @@
 #include <iostream>
 
 namespace docacxx {
+namespace comch {
 Producer::Producer(
     doca_comch_connection *peer_conn, doca_pe *pe_, doca_dev *dev, const Cfg &cfg) {
     // get cap
@@ -64,5 +65,6 @@ void Producer::send_error_cb(
     doca_task_free(doca_comch_producer_task_send_as_task(task));
     auto *producer = (Producer *)ctx_user_data.ptr;
     producer->m_custom_send_error_cb();
+}
 }
 }

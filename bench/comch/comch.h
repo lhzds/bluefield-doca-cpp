@@ -15,10 +15,10 @@ public:
         :m_doca_max_recv_task_num{doca_max_recv_task_num} {
         docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
-        docacxx::Consumer::Cfg cfg;
+        docacxx::comch::Consumer::Cfg cfg;
         cfg.m_recv_task_num = doca_max_recv_task_num;
 
-        m_inner = std::make_unique<docacxx::Consumer>(peer_conn, m_pe,
+        m_inner = std::make_unique<docacxx::comch::Consumer>(peer_conn, m_pe,
             conn_pe, mmap, dev, cfg);
         m_inner->custom_recv_cb = [&]() {
             if (not m_wait_queue.empty()) {
@@ -72,7 +72,7 @@ public:
 protected:
     doca_pe *m_pe{};
     size_t m_doca_max_recv_task_num{};
-    std::unique_ptr<docacxx::Consumer> m_inner;
+    std::unique_ptr<docacxx::comch::Consumer> m_inner;
     size_t m_finished{};
     std::queue<doca_buf *> m_wait_queue;
 };
@@ -84,10 +84,10 @@ public:
         :m_doca_max_send_task_num{doca_max_send_task_num}, m_consumer_id{consumer_id} {
         docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
-        docacxx::Producer::Cfg cfg;
+        docacxx::comch::Producer::Cfg cfg;
         cfg.m_send_task_num = doca_max_send_task_num;
 
-        m_inner = std::make_unique<docacxx::Producer>(peer_conn, m_pe, dev, cfg);
+        m_inner = std::make_unique<docacxx::comch::Producer>(peer_conn, m_pe, dev, cfg);
         m_inner->m_custom_send_cb = [&]() {
             if (not m_wait_queue.empty()) {
                 auto buf = m_wait_queue.front();
@@ -143,7 +143,7 @@ public:
 protected:
     doca_pe *m_pe{};
     size_t m_doca_max_send_task_num{};
-    std::unique_ptr<docacxx::Producer> m_inner;
+    std::unique_ptr<docacxx::comch::Producer> m_inner;
     size_t m_finished{};
     size_t m_consumer_id{};
     std::queue<doca_buf *> m_wait_queue;
@@ -156,7 +156,7 @@ public:
         :m_recv_mmap{recv_mmap}, m_doca_max_send_task_num{doca_max_send_task_num}, m_doca_max_recv_task_num{doca_max_recv_task_num} {
         docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
-        m_inner = std::make_unique<docacxx::Server>(name.data(), dev, dev_rep, m_pe, docacxx::Server::Cfg{});
+        m_inner = std::make_unique<docacxx::comch::Server>(name.data(), dev, dev_rep, m_pe, docacxx::comch::Server::Cfg{});
         
         m_inner->m_custom_new_conn_cb = [&](doca_comch_connection *conn) {
             m_peer_conn = conn;
@@ -207,7 +207,7 @@ private:
     size_t m_doca_max_recv_task_num;
 
     doca_pe *m_pe;
-    std::unique_ptr<docacxx::Server> m_inner;
+    std::unique_ptr<docacxx::comch::Server> m_inner;
     doca_comch_connection *m_peer_conn{};
 
     std::optional<size_t> m_host_consumer_id;
@@ -222,7 +222,7 @@ public:
         :m_recv_mmap{recv_mmap}, m_doca_max_send_task_num{doca_max_send_task_num}, m_doca_max_recv_task_num{doca_max_recv_task_num} {
         docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
-        m_inner = std::make_unique<docacxx::Client>(server_name.data(), dev, m_pe, docacxx::Client::Cfg{});
+        m_inner = std::make_unique<docacxx::comch::Client>(server_name.data(), dev, m_pe, docacxx::comch::Client::Cfg{});
 
         m_inner->m_custom_new_consumer_cb = [&](doca_comch_connection *conn, uint32_t id) {
             m_dpu_consumer_id = id;
@@ -271,7 +271,7 @@ private:
     size_t m_doca_max_recv_task_num;
 
     doca_pe *m_pe;
-    std::unique_ptr<docacxx::Client> m_inner;
+    std::unique_ptr<docacxx::comch::Client> m_inner;
     doca_comch_connection *m_peer_conn{};
 
     std::optional<size_t> m_dpu_consumer_id;

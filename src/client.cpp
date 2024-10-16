@@ -5,6 +5,7 @@
 #include <iostream>
 
 namespace docacxx {
+namespace comch {
 Client::Client(
     std::string_view server_name,
     doca_dev *dev, doca_pe *pe, const Cfg &cfg) {
@@ -99,5 +100,6 @@ void Client::recv_cb(
     struct doca_comch_connection *comch_connection) {
     auto *client = from_conn_to_client(comch_connection);
     client->m_custom_recv_cb(recv_buffer, msg_len, comch_connection);
+}
 }
 }

@@ -9,6 +9,7 @@
 #include "context.h"
 
 namespace docacxx {
+namespace comch {
 class Producer: public ContextBase {
 public:
     using CustomSendCb = std::function<void()>;
@@ -49,4 +50,5 @@ private:
         doca_data task_user_data,
         doca_data ctx_user_data);
 };
+}
 }

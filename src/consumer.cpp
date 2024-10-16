@@ -9,6 +9,7 @@
 #include <iostream>
 
 namespace docacxx {
+namespace comch {
 Consumer::Consumer(
     doca_comch_connection *peer_conn, doca_pe *pe, doca_pe *conn_pe, doca_mmap *mmap,
     doca_dev *dev, const Cfg &cfg) {
@@ -68,3 +69,4 @@ doca_task *Consumer::alloc_recv_task(doca_buf *buf) {
     return doca_comch_consumer_task_post_recv_as_task(post_recv_task);
 }
 }        
+}

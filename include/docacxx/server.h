@@ -12,6 +12,7 @@
 #include "context.h"
 
 namespace docacxx {
+namespace comch {
 class Server: public ContextBase {
 public:
     using CustomSendCb = std::function<void()>;
@@ -87,4 +88,5 @@ private:
 
     static Server *from_conn_to_server(doca_comch_connection *comch_connection);
 };
+}
 }

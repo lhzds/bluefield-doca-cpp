@@ -10,6 +10,7 @@
 #include "context.h"
 
 namespace docacxx {
+namespace comch {
 class Consumer: public ContextBase {
 public:
     using CustomRecvCb = std::function<void()>;
@@ -51,4 +52,5 @@ private:
         doca_data task_user_data,
         doca_data ctx_user_data);
 };
+}
 }
