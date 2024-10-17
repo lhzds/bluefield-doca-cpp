@@ -1,12 +1,10 @@
 #include "erasure_coder.h"
 #include "docacxx/mem.h"
-#include "../part_iterator.h"
 #include "../print_util.h"
 #include <argparse/argparse.hpp>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <fstream>
-#include <stdexcept>
 
 using namespace std::chrono;
 using Timer = std::chrono::high_resolution_clock;
@@ -222,5 +220,6 @@ int main(int argc, char **argv) {
     output_fs << json.dump(4) << std::endl;
     output_fs.close();
 
+    // close dev
     return 0;
 }

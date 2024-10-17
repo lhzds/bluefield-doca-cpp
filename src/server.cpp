@@ -43,14 +43,6 @@ void Server::clean_impl() {
         std::cerr << "Failed to destroy server properly with error = "
                   << doca_error_get_name(result) << std::endl;
     }
-    result = doca_dev_close(m_dev);
-    if (result != DOCA_SUCCESS)
-        std::cerr << "Failed to close dev properly with error = "
-                  << doca_error_get_name(result) << std::endl;
-    result = doca_dev_rep_close(m_dev_rep);
-    if (result != DOCA_SUCCESS)
-        std::cerr << "Failed to close dev rep properly with error = "
-                  << doca_error_get_name(result) << std::endl;
 }
 
 Server *Server::from_conn_to_server(doca_comch_connection *comch_connection) {

@@ -20,7 +20,7 @@ public:
 
         m_inner = std::make_unique<docacxx::comch::Consumer>(peer_conn, m_pe,
             conn_pe, mmap, dev, cfg);
-        m_inner->custom_recv_cb = [&]() {
+        m_inner->m_custom_recv_cb = [&]() {
             if (not m_wait_queue.empty()) {
                 auto buf = m_wait_queue.front();
                 m_wait_queue.pop();

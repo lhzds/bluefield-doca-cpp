@@ -32,8 +32,8 @@ public:
     Cap m_cap{};
     doca_comch_consumer *m_inner{};
 
-    CustomRecvCb custom_recv_cb{[] {}};
-    CustomRecvCb custom_recv_error_cb{[] {
+    CustomRecvCb m_custom_recv_cb{[] {}};
+    CustomRecvCb m_custom_recv_error_cb{[] {
         throw std::runtime_error("consumer recv error");
     }};
 

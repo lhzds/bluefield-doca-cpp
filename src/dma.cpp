@@ -36,7 +36,7 @@ void Dma::memcpy_cb(doca_dma_task_memcpy *task,
     doca_data ctx_user_data) {
     doca_task_free(doca_dma_task_memcpy_as_task(task));
     auto *dma = (Dma *)ctx_user_data.ptr;
-    dma->m_custom_memcpy_cb(task_user_data);
+    dma->m_custom_memcpy_cb();
 }
 
 void Dma::memcpy_error_cb(doca_dma_task_memcpy *task,
@@ -44,6 +44,6 @@ void Dma::memcpy_error_cb(doca_dma_task_memcpy *task,
     doca_data ctx_user_data) {
     doca_task_free(doca_dma_task_memcpy_as_task(task));
     auto *dma = (Dma *)ctx_user_data.ptr;
-    dma->m_custom_memcpy_error_cb(task_user_data);
+    dma->m_custom_memcpy_error_cb();
 }
 }

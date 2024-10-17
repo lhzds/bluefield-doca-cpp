@@ -35,10 +35,6 @@ void Client::clean_impl() {
         std::cerr << "Failed to destroy client properly with error = "
                   << doca_error_get_name(result) << std::endl;
     }
-    result = doca_dev_close(m_dev);
-    if (result != DOCA_SUCCESS)
-        std::cerr << "Failed to close dev properly with error = "
-                  << doca_error_get_name(result) << std::endl;
 }
 
 doca_comch_connection *Client::get_connection() {
