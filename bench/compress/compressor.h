@@ -27,18 +27,11 @@ public:
 
             ++m_finished;
         };
-        m_decompressor->start();
-        while (m_decompressor->m_state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(m_pe);
-        }
+        m_decompressor->start_sync();
     }
 
     virtual ~Compressor() {
-        m_decompressor->stop();
-        while (m_decompressor->m_state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(m_pe);
-        }
-        m_decompressor->clean();
+        m_decompressor->clean_sync();
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {

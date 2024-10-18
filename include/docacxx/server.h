@@ -28,29 +28,23 @@ public:
         // size_t max_recv_queue_size{};
     };
 
-    doca_dev *m_dev{};
-    doca_dev_rep *m_dev_rep{};
     doca_comch_server *m_inner{};
 
-    Server(
-        std::string_view name,
-        doca_dev *dev, doca_dev_rep *dev_rep, doca_pe *pe, const Cfg &cfg);
+    Server(std::string_view name, doca_dev *dev, doca_dev_rep *dev_rep, doca_pe *pe, const Cfg &cfg);
 
     CustomSendCb m_custom_send_cb{[] {}};
-    CustomSendCb m_custom_send_error_cb{[] {
-        throw std::runtime_error("client send error.");
-    }};
+    CustomSendCb m_custom_send_error_cb{[] { throw std::runtime_error("client send error."); }};
     CustomRecvCb m_custom_recv_cb{[](uint8_t *, uint32_t, doca_comch_connection *) {}};
     CustomConnCb m_custom_new_conn_cb{[](doca_comch_connection *) {}};
     CustomConnCb m_custom_disconn_cb{[](doca_comch_connection *) {
         throw std::runtime_error("peer is disconnected");
     }};
     CustomConsumerCb m_custom_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
-    CustomConsumerCb m_custom_expired_consumer_cb{
-        [](doca_comch_connection *, uint32_t id) {
-            throw std::runtime_error(
-                fmt::format("consumer with ID=[{}] is expired.", id));
-        }};
+    CustomConsumerCb m_custom_expired_consumer_cb{ [](doca_comch_connection *, uint32_t id) {
+        throw std::runtime_error(fmt::format("consumer with ID=[{}] is expired.", id));
+    }};
+
+    doca_task *alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len);
 
 protected:
     void clean_impl() override;

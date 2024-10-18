@@ -72,7 +72,7 @@ std::vector<std::unique_ptr<docacxx::Buffer>> compress(const std::string &in_dat
     docacxx::BufInventory &buf_inv, Compressor &compressor) {
     std::vector<std::unique_ptr<docacxx::Buffer>> compressed_blocks;
     PartIterator in_part_iter(in_data.size(), block_size);
-    PartIterator out_part_iter(buf_inv.m_size, compressor.compress_bound(block_size));
+    PartIterator out_part_iter(buf_inv.size(), compressor.compress_bound(block_size));
 
     while (in_part_iter.has_next() && out_part_iter.has_next()) {
         auto [in_offset, in_len] = in_part_iter.next();
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
     auto decompress_time = duration_cast<Duration>(end - start);
 
     // test
-    std::string_view result(dst_buf_inv.m_mem, file_size);
+    std::string_view result(dst_buf_inv.data(), file_size);
 
     if (file_data != result) {
         std::cerr << "the contents before and after compression are different" << std::endl;

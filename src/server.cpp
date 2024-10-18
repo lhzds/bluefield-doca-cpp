@@ -37,6 +37,16 @@ Server::Server(
     //     "failed to set max queue size");
 }
 
+doca_task *Server::alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len) {
+    doca_comch_task_send *task{};
+    auto result = doca_comch_server_task_send_alloc_init(m_inner, peer, msg, len, &task);
+    if (result == DOCA_ERROR_NO_MEMORY) {
+        return nullptr;
+    }
+    check_derr(result, "failed to alloc send task");
+    return doca_comch_task_send_as_task(task);
+}
+
 void Server::clean_impl() {
     auto result = doca_comch_server_destroy(m_inner);
     if (result != DOCA_SUCCESS) {

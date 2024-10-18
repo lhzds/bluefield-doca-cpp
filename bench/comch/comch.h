@@ -3,6 +3,7 @@
 #include "docacxx/consumer.h"
 #include "docacxx/producer.h"
 #include "docacxx/mem.h"
+#include <cstdint>
 #include <doca_dev.h>
 #include <optional>
 #include <queue>
@@ -31,19 +32,11 @@ public:
             ++m_finished;
         };
 
-        m_inner->start();
-        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(m_pe);
-            doca_pe_progress(conn_pe);
-        }
+        m_inner->start_sync({m_pe, conn_pe});
     }
 
     ~SyncConsumer() {
-        m_inner->stop();
-        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(m_pe);
-        }
-        m_inner->clean();
+        m_inner->clean_sync();
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
@@ -101,18 +94,11 @@ public:
             ++m_finished;
         };
 
-        m_inner->start();
-        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(m_pe);
-        }
+        m_inner->start_sync();
     }
 
     ~SyncProducer() {
-        m_inner->stop();
-        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(m_pe);
-        }
-        m_inner->clean();
+        m_inner->clean_sync();
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
@@ -157,19 +143,13 @@ public:
         docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
         m_inner = std::make_unique<docacxx::comch::Server>(name.data(), dev, dev_rep, m_pe, docacxx::comch::Server::Cfg{});
-        
         m_inner->m_custom_new_conn_cb = [&](doca_comch_connection *conn) {
             m_peer_conn = conn;
         };
-
         m_inner->m_custom_new_consumer_cb = [&](doca_comch_connection *conn, uint32_t id) {
             m_host_consumer_id = id;
         };
-
-        m_inner->start();
-        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(m_pe);
-        }
+        m_inner->start_sync();
 
         while (not m_host_consumer_id) {
             doca_pe_progress(m_pe);
@@ -182,11 +162,7 @@ public:
         m_producer.reset();
         m_consumer.reset();
 
-        m_inner->stop();
-        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(m_pe);
-        }
-        m_inner->clean();
+        m_inner->clean_sync();
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
@@ -223,15 +199,10 @@ public:
         docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
 
         m_inner = std::make_unique<docacxx::comch::Client>(server_name.data(), dev, m_pe, docacxx::comch::Client::Cfg{});
-
         m_inner->m_custom_new_consumer_cb = [&](doca_comch_connection *conn, uint32_t id) {
             m_dpu_consumer_id = id;
         };
-
-        m_inner->start();
-        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(m_pe);
-        }
+        m_inner->start_sync();
 
         m_peer_conn = m_inner->get_connection();
 
@@ -246,11 +217,7 @@ public:
         m_producer.reset();
         m_consumer.reset();
 
-        m_inner->stop();
-        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(m_pe);
-        }
-        m_inner->clean();
+        m_inner->clean_sync();
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {

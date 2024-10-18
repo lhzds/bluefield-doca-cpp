@@ -86,8 +86,8 @@ int main(int argc, char **argv) {
         max_task_num);
     docacxx::BufInventory recv_buf_inv(dev, max_task_num * msg_size,
         max_task_num);
-    for (size_t i{}; i < send_buf_inv.m_size; ++i) {
-        send_buf_inv.m_mem[i] = i % 100;
+    for (size_t i{}; i < send_buf_inv.size(); ++i) {
+        send_buf_inv.data()[i] = i % 100;
     }
 
     // create buffers
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
     }
 
     // create context
-    DpuEnd dpu_end(SERVER_NAME, dev, dev_rep, recv_buf_inv.m_mmap,
+    DpuEnd dpu_end(SERVER_NAME, dev, dev_rep, recv_buf_inv.raw_mmap(),
         max_task_num, max_task_num);
 
     decltype(Timer::now()) start, end;
@@ -129,8 +129,8 @@ int main(int argc, char **argv) {
     auto time = duration_cast<Duration>(end - start);
 
     // test
-    if (std::string_view(send_buf_inv.m_mem, send_buf_inv.m_size) 
-        != std::string_view(recv_buf_inv.m_mem, recv_buf_inv.m_size)) {
+    if (std::string_view(send_buf_inv.data(), send_buf_inv.size()) 
+        != std::string_view(recv_buf_inv.data(), recv_buf_inv.size())) {
         std::cerr << "the contents are different" << std::endl;
         exit(EXIT_FAILURE);
     }

@@ -109,8 +109,8 @@ int main(int argc, char **argv) {
         max_create_task_num);
     docacxx::BufInventory dst_buf_inv(dev, max_create_task_num * (rdnc_block_count * block_size),
         max_create_task_num);
-    for (size_t i{}; i < src_buf_inv.m_size; ++i) {
-        src_buf_inv.m_mem[i] = random();
+    for (size_t i{}; i < src_buf_inv.size(); ++i) {
+        src_buf_inv.data()[i] = random();
     }
 
     std::vector<std::unique_ptr<docacxx::Buffer>> src_bufs;

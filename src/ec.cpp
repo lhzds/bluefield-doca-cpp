@@ -1,5 +1,6 @@
 #include "docacxx/ec.h"
 #include <doca_erasure_coding.h>
+#include <iostream>
 
 namespace docacxx {
 Ec::Ec(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <doca_buf_inventory.h>
 #include <doca_compress.h>
 #include <iostream>
 #include <memory>
@@ -8,6 +9,58 @@
 #include "doca_utils.h"
 
 namespace docacxx {
+class Mmap {
+public:
+    doca_mmap *m_inner{};
+    char *m_mem{};
+    size_t m_size{};
+
+    Mmap(char *mem, size_t size, doca_dev * dev, uint32_t access_mask)
+        : m_mem(mem), m_size(size) {
+        check_derr(doca_mmap_create(&m_inner), "failed to create mmap");
+
+        check_derr(doca_mmap_add_dev(m_inner, dev), "failed to add dev to mmap");
+        check_derr(doca_mmap_set_permissions(m_inner, access_mask),
+            "failed to set permissions of mmap");
+        check_derr(doca_mmap_set_memrange(m_inner, m_mem, m_size),
+            "failed set memrange of mmap");
+    }
+
+    Mmap(size_t size, doca_dev *dev, uint32_t access_mask)
+        : Mmap(new char[size]{}, size, dev, access_mask) {
+        m_is_mem_owner = true;
+    }
+
+    Mmap(std::string_view export_desc, doca_dev *dev) {
+        doca_mmap_create_from_export(nullptr, export_desc.data(), export_desc.size(),
+            dev, &m_inner);
+    }
+    
+    ~Mmap() {
+        auto result = doca_mmap_destroy(m_inner);
+        if (result != DOCA_SUCCESS) {
+            std::cerr << "Failed to destroy mmap: "
+                      << doca_error_get_descr(result) << std::endl;
+            return;
+        }
+
+        if (m_is_mem_owner) {
+            delete[] m_mem;
+        }
+    }
+
+    std::string_view export_pci(doca_dev *dev) {
+        const void *export_desc{};
+        size_t len{};
+        check_derr(doca_mmap_export_pci(m_inner, dev, &export_desc, &len)
+            , "failed to export mmap by pci");
+        return {(const char *)export_desc, len};
+    }
+
+private:
+    bool m_is_mem_owner{};
+};
+
 class Buffer {
 public:
     doca_buf *m_inner{};
@@ -30,14 +83,12 @@ public:
     }
 
     void set_doca_buf_data(size_t size) {
-        check_derr(
-            doca_buf_set_data(m_inner, m_mem, size),
+        check_derr(doca_buf_set_data(m_inner, m_mem, size),
             "failed to set data of buf");
     }
 
     void clear_doca_buf_data() {
-        check_derr(
-            doca_buf_set_data(m_inner, m_mem, 0),
+        check_derr(doca_buf_set_data(m_inner, m_mem, 0),
             "failed to clear data of buf");
     }
 
@@ -53,62 +104,86 @@ public:
 
 class BufInventory {
 public:
-    doca_mmap *m_mmap{};
-    char *m_mem;
-    const size_t m_size{};
+    doca_buf_inventory *m_inner{};
 
-    BufInventory(doca_dev *dev, char *mem, size_t size, size_t max_bufs)
-        : m_size{size}, m_mem{mem} {
-        check_derr(
-            doca_buf_inventory_create(max_bufs, &m_inner), "failed to create buf inv");
+    BufInventory(doca_dev *dev, char *mem, size_t size, size_t max_bufs,
+        uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE) {
+        check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
+            "failed to create buf inv");
 
-        check_derr(
-            doca_buf_inventory_start(m_inner), "failed to start buf inv");
-        check_derr(doca_mmap_create(&m_mmap), "failed to create mmap");
-        check_derr(doca_mmap_add_dev(m_mmap, dev), "failed to add dev to mmap");
-        check_derr(
-            doca_mmap_set_permissions(m_mmap, DOCA_ACCESS_FLAG_PCI_READ_WRITE),
-            "failed to set permissions of mmap");
-        check_derr(
-            doca_mmap_set_memrange(m_mmap, m_mem, m_size),
-            "failed set memrange of mmap");
-        check_derr(doca_mmap_start(m_mmap), "failed to start mmap");;
+        m_mmap = std::make_unique<Mmap>(mem, size, dev, access_mask);
     }
 
-    BufInventory(doca_dev *dev, size_t size, size_t max_bufs):
-        BufInventory(dev, new char[size]{}, size, max_bufs)  {
-        m_is_owner = true;
+    BufInventory(doca_dev *dev, size_t size, size_t max_bufs,
+        uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE) {
+        check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
+            "failed to create buf inv");
+
+        m_mmap = std::make_unique<Mmap>(size, dev, access_mask);
+    }
+
+    BufInventory(std::string_view export_desc, doca_dev *dev, size_t max_bufs) {
+        check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
+            "failed to create buf inv");
+        
+        m_mmap = std::make_unique<Mmap>(export_desc, dev);
     }
 
     ~BufInventory() {
-        auto result = doca_mmap_destroy(m_mmap);
-        if (result != DOCA_SUCCESS) {
-            std::cerr << "Failed to destroy mmap: "
-                      << doca_error_get_descr(result) << std::endl;
-            return;
-        }
-
-        result = doca_buf_inventory_destroy(m_inner);
+        auto result = doca_buf_inventory_destroy(m_inner);
         if (result != DOCA_SUCCESS) {
             std::cerr << "Failed to destroy inventory: "
                       << doca_error_get_descr(result) << std::endl;
             return;
         }
-
-        if (m_is_owner) {
-            delete[] m_mem;
-        }
     }
 
     std::unique_ptr<Buffer> get_buf(size_t offset, size_t size) {
         doca_buf *buf{};
-        check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, m_mmap, m_mem + offset, size, &buf),
+        check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, m_mmap->m_inner, data() + offset, size, &buf),
             "failed to get doca buf");
-        return std::make_unique<Buffer>(buf, m_mem + offset, size);
+        return std::make_unique<Buffer>(buf, data() + offset, size);
+    }
+
+    size_t size() {
+        return m_mmap->m_size;
+    }
+
+    char * data() {
+        return m_mmap->m_mem;
+    }
+
+    doca_mmap *raw_mmap() {
+        return m_mmap->m_inner;
     }
 
 private:
-    bool m_is_owner{};
+    std::unique_ptr<Mmap> m_mmap;
+};
+
+class BufManager {
+public:
     doca_buf_inventory *m_inner{};
+    
+   BufManager(doca_dev *dev, size_t max_bufs) {
+        check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
+            "failed to create buf inv");
+    }
+
+    ~BufManager() {
+        auto result = doca_buf_inventory_destroy(m_inner);
+        if (result != DOCA_SUCCESS) {
+            std::cerr << "Failed to destroy inventory: "
+                      << doca_error_get_descr(result) << std::endl;
+            return;
+        }
+    }
+
+    std::unique_ptr<Buffer> get_buf(Mmap &mmap, size_t offset, size_t size) {
+        doca_buf *buf{};
+        check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, mmap.m_inner, mmap.m_mem + offset, size, &buf),
+            "failed to get doca buf");
+        return std::make_unique<Buffer>(buf, mmap.m_mem + offset, size);
+    }
 };
 }

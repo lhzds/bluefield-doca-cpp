@@ -29,20 +29,30 @@ Client::Client(
     //     "failed to set max queue size");
 }
 
-void Client::clean_impl() {
-    auto result = doca_comch_client_destroy(m_inner);
-    if (result != DOCA_SUCCESS) {
-        std::cerr << "Failed to destroy client properly with error = "
-                  << doca_error_get_name(result) << std::endl;
-    }
-}
-
 doca_comch_connection *Client::get_connection() {
     doca_comch_connection *conn{};
     check_derr(
         doca_comch_client_get_connection(m_inner, &conn),
         "failed to get connection from client");
     return conn;
+}
+
+doca_task *Client::alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len) {
+    doca_comch_task_send *task{};
+    auto result = doca_comch_client_task_send_alloc_init(m_inner, peer, msg, len, &task);
+    if (result == DOCA_ERROR_NO_MEMORY) {
+        return nullptr;
+    }
+    check_derr(result, "failed to alloc send task");
+    return doca_comch_task_send_as_task(task);
+}
+
+void Client::clean_impl() {
+    auto result = doca_comch_client_destroy(m_inner);
+    if (result != DOCA_SUCCESS) {
+        std::cerr << "Failed to destroy client properly with error = "
+                  << doca_error_get_name(result) << std::endl;
+    }
 }
 
 Client *Client::from_conn_to_client(doca_comch_connection *comch_connection) {

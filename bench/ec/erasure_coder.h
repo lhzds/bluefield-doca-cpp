@@ -38,11 +38,7 @@ public:
 
             ++m_recover_finished_count;
         };
-
-        m_inner->start();
-        while (m_inner->m_state != DOCA_CTX_STATE_RUNNING) {
-            doca_pe_progress(m_pe);
-        }
+        m_inner->start_sync();
 
         m_create_matrix = m_inner->create_matrix(mat_type, data_block_count,
             rdnc_block_count);
@@ -50,12 +46,7 @@ public:
 
     ~ErasureCoder() {
         m_inner->destroy_matrix(m_create_matrix);
-
-        m_inner->stop();
-        while (m_inner->m_state != DOCA_CTX_STATE_IDLE) {
-            doca_pe_progress(m_pe);
-        }
-        m_inner->clean();
+        m_inner->clean_sync();
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
@@ -71,7 +62,6 @@ public:
 
         for (size_t i{}; i < std::min(src.size(), m_doca_max_create_task_num); ++i) {
             auto *task = m_inner->alloc_create_task(m_create_matrix, src[i]->m_inner, dst[i]->m_inner);
-            assert(task);
             m_inner->submit(task);
         }
 
@@ -96,7 +86,6 @@ public:
 
         for (size_t i{}; i < std::min(src.size(), m_doca_max_recover_task_num); ++i) {
             auto *task = m_inner->alloc_recover_task(recover_matrix, src[i]->m_inner, dst[i]->m_inner);
-            assert(task);
             m_inner->submit(task);
         }
 

@@ -1,6 +1,7 @@
 #include "docacxx/dma.h"
 #include <doca_dma.h>
 #include <doca_error.h>
+#include <iostream>
 
 namespace docacxx {
 Dma::Dma(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
