@@ -15,23 +15,24 @@ public:
     char *m_mem{};
     size_t m_size{};
 
-    Mmap(char *mem, size_t size, doca_dev * dev, uint32_t access_mask)
+    Mmap(doca_dev * dev, char *mem, size_t size, uint32_t access_mask)
         : m_mem(mem), m_size(size) {
         check_derr(doca_mmap_create(&m_inner), "failed to create mmap");
-
         check_derr(doca_mmap_add_dev(m_inner, dev), "failed to add dev to mmap");
         check_derr(doca_mmap_set_permissions(m_inner, access_mask),
             "failed to set permissions of mmap");
         check_derr(doca_mmap_set_memrange(m_inner, m_mem, m_size),
             "failed set memrange of mmap");
+        check_derr(doca_mmap_start(m_inner), "failed to start mmap");
     }
 
-    Mmap(size_t size, doca_dev *dev, uint32_t access_mask)
-        : Mmap(new char[size]{}, size, dev, access_mask) {
+    Mmap(doca_dev *dev, size_t size, uint32_t access_mask)
+        : Mmap(dev, new char[size]{}, size, access_mask) {
         m_is_mem_owner = true;
     }
 
-    Mmap(std::string_view export_desc, doca_dev *dev) {
+    Mmap(std::string_view export_desc, doca_dev *dev, char *remote_mem, size_t size)
+        :m_mem(remote_mem), m_size(size) {
         doca_mmap_create_from_export(nullptr, export_desc.data(), export_desc.size(),
             dev, &m_inner);
     }
@@ -110,23 +111,20 @@ public:
         uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE) {
         check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
             "failed to create buf inv");
-
-        m_mmap = std::make_unique<Mmap>(mem, size, dev, access_mask);
+        m_mmap = std::make_unique<Mmap>(dev, mem, size, access_mask);
     }
 
     BufInventory(doca_dev *dev, size_t size, size_t max_bufs,
         uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE) {
         check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
             "failed to create buf inv");
-
-        m_mmap = std::make_unique<Mmap>(size, dev, access_mask);
+        m_mmap = std::make_unique<Mmap>(dev, size, access_mask);
     }
 
-    BufInventory(std::string_view export_desc, doca_dev *dev, size_t max_bufs) {
+    BufInventory(std::string_view export_desc, doca_dev *dev, char *remote_mem, size_t size, size_t max_bufs) {
         check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
             "failed to create buf inv");
-        
-        m_mmap = std::make_unique<Mmap>(export_desc, dev);
+        m_mmap = std::make_unique<Mmap>(export_desc, dev, remote_mem, size);
     }
 
     ~BufInventory() {
