@@ -4,28 +4,35 @@
 #include <doca_error.h>
 #include <doca_pe.h>
 #include <functional>
+#include <memory>
+#include <optional>
 
 #include "doca_utils.h"
+#include "task.h"
 
 namespace docacxx {
-class ContextBase {
+class Context: public Noncopyable {
 public:
-    using CustomStateChangedCb = std::function<void(doca_ctx_states prev_state,
-						doca_ctx_states next_state)>;
+    using State = doca_ctx_states;
+    using StateChangedCallback = std::function<void(State prev_state, State next_state)>;
 
-    doca_ctx_states m_state{DOCA_CTX_STATE_IDLE};
+    Context() = default;         
+    virtual ~Context() = default;
 
-    virtual ~ContextBase() = default;
+    State state() const {
+        return m_state;
+    }
 
-    void init_ctx(doca_ctx *inner, doca_pe *pe) {
+    void init_ctx(doca_ctx *inner, doca_pe *pe, doca_pe *other_pe = nullptr) {
         m_inner = inner;
-        doca_data data{};
-        data.ptr = this;
-        check_derr(doca_ctx_set_user_data(m_inner, data), "failed to set user data of ctx");
+        doca_data ctx_data{};
+        ctx_data.ptr = this;
+        check_derr(doca_ctx_set_user_data(m_inner, ctx_data), "failed to set user data for ctx");
         check_derr(doca_ctx_set_state_changed_cb(m_inner, state_changed_cb),
-            "failed to set state changed cb");
+            "failed to set state changed cb for ctx");
         
         m_pe = pe;
+        m_other_pe = other_pe;
         check_derr(doca_pe_connect_ctx(m_pe, m_inner), "failed to connect pe with ctx");
     }
 
@@ -35,16 +42,10 @@ public:
 
     void start_sync() {
         start();
-        while (m_state != DOCA_CTX_STATE_RUNNING) {
+        while (state() != DOCA_CTX_STATE_RUNNING) {
             doca_pe_progress(m_pe);
-        }
-    }
-
-    void start_sync(const std::vector<doca_pe *> &pes) {
-        start();
-        while (m_state != DOCA_CTX_STATE_RUNNING) {
-            for (auto *pe : pes) {
-                doca_pe_progress(pe);
+            if (m_other_pe && m_other_pe != m_pe) {
+                doca_pe_progress(m_other_pe);
             }
         }
     }
@@ -58,35 +59,32 @@ public:
 
     void stop_sync() {
         stop();
-        while (m_state != DOCA_CTX_STATE_IDLE) {
+        while (state() != DOCA_CTX_STATE_IDLE) {
             doca_pe_progress(m_pe);
         }
     }
 
-    void stop_sync(const std::vector<doca_pe *> &pes) {
-        stop();
-        while (m_state != DOCA_CTX_STATE_IDLE) {
-            for (auto *pe : pes) {
-                doca_pe_progress(pe);
-            }
+    // return std::unique_ptr 表示 retry
+    std::optional<std::unique_ptr<Task>> submit(std::unique_ptr<Task> task) {
+        // 获取 task 所有权并释放，直到 task 完成时的回调才重新获取所有权并释放任务
+        auto *raw_task = task.release()->raw();
+        doca_error result{doca_task_submit(raw_task)};
+        if (result == DOCA_ERROR_AGAIN) {
+            return task;
         }
+
+        check_derr(result, "failed to summit task");
+        return {};
     }
 
-    bool submit(doca_task *task) {
-        doca_error result{doca_task_submit(task)};
-        if (result != DOCA_ERROR_AGAIN) {
-            check_derr(result, "failed to summit send_task");
-        }
-        return result != DOCA_ERROR_AGAIN;
-    }
-
-    bool is_cleaned() { return m_is_cleaned_; }
+    bool is_cleaned() { return m_is_cleaned; }
     
     bool clean() {
         if (m_state != DOCA_CTX_STATE_IDLE) {
             return false;
         }
         clean_impl();
+        m_is_cleaned = true;
         return true;
     }
 
@@ -95,24 +93,30 @@ public:
         clean_impl();
     }
 
-    CustomStateChangedCb m_custom_stated_change_cb{[](doca_ctx_states prev_state,
-						doca_ctx_states next_state) {}};
+    void clean_sync(const std::vector<doca_pe *> &pes) {
+        stop_sync();
+        clean_impl();
+    }
 
 protected:
     virtual void clean_impl() = 0;
 
 private:
+    State m_state{DOCA_CTX_STATE_IDLE};
     doca_pe *m_pe{};
+    doca_pe *m_other_pe{};
     doca_ctx *m_inner{};
-    bool m_is_cleaned_{};
+    bool m_is_cleaned{};
+
+    StateChangedCallback m_stated_change_cb{[](State, State) {}};
 
     static void state_changed_cb(const doca_data user_data,
 						doca_ctx *ctx,
-						doca_ctx_states prev_state,
-						doca_ctx_states next_state) {
-        auto *context = (ContextBase *)user_data.ptr; // 子类指针转为父类
+						State prev_state,
+						State next_state) {
+        auto *context = (Context *)user_data.ptr; // 子类指针转为父类
         context->m_state = next_state;
-        context->m_custom_stated_change_cb(prev_state, next_state);
+        context->m_stated_change_cb(prev_state, next_state);
     };
 };
 }

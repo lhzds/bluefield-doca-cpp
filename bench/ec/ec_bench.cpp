@@ -1,13 +1,15 @@
-#include "erasure_coder.h"
-#include "docacxx/mem.h"
-#include "../print_util.h"
 #include <argparse/argparse.hpp>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <fstream>
 
+#include "docacxx/mem.h"
+#include "clock.h"
+#include "ec_coder.h"
+#include "scoped_guard.h"
+#include "print_util.h"
+
 using namespace std::chrono;
-using Timer = std::chrono::high_resolution_clock;
 using Duration = std::chrono::microseconds;
 using Json = nlohmann::json;
 
@@ -18,8 +20,8 @@ std::string output_file;
 size_t block_size;
 size_t data_block_count;
 size_t rdnc_block_count;
-size_t max_create_task_num;
-size_t max_recover_task_num;
+size_t create_task_slot_num;
+size_t recover_task_slot_num;
 
 size_t repeat_time;
 size_t total_block_count;
@@ -46,11 +48,11 @@ void read_args(int argc, char **argv) {
         .required()
         .scan<'d', size_t>();
     program.add_argument("-n")
-        .help("max create task num")
+        .help("create task slot num")
         .required()
         .scan<'d', size_t>();
     program.add_argument("-m")
-        .help("max recover task num")
+        .help("recover task slot num")
         .required()
         .scan<'d', size_t>();
 
@@ -68,21 +70,21 @@ void read_args(int argc, char **argv) {
     block_size = program.get<size_t>("-b");
     data_block_count = program.get<size_t>("-d");
     rdnc_block_count = program.get<size_t>("-r");
-    max_create_task_num = program.get<size_t>("-n");
-    max_recover_task_num = program.get<size_t>("-m");
+    create_task_slot_num = program.get<size_t>("-n");
+    recover_task_slot_num = program.get<size_t>("-m");
 
     total_block_count = data_block_count + rdnc_block_count;
 
-    if (max_create_task_num >= 10) {
+    if (create_task_slot_num >= 10) {
         repeat_time = 1;
     } else {
-        repeat_time = 10 / max_create_task_num + 1;
+        repeat_time = 10 / create_task_slot_num + 1;
     }
     
-    if (max_recover_task_num >= 10) {
+    if (recover_task_slot_num >= 10) {
         repeat_time = 1;
     } else {
-        repeat_time = 10 / max_recover_task_num + 1;
+        repeat_time = 10 / recover_task_slot_num + 1;
     } 
 
     std::cout << "Device pci address: " << dev_pci_addr << std::endl;
@@ -99,47 +101,49 @@ int main(int argc, char **argv) {
     doca_dev *dev{};
     docacxx::check_derr(docacxx::open_doca_device_with_pci(dev_pci_addr.data(), &dev),
             "failed to open dev");
+    ScopeGuard guard([&] {
+        docacxx::check_derr(doca_dev_close(dev), "failed to close dev");
+    });
 
     // create ec encoder
-    ErasureCoder encoder(dev, MATRIX_TYPE, data_block_count, rdnc_block_count,
-        max_create_task_num, max_recover_task_num);
+    EcCoder coder(dev, MATRIX_TYPE, data_block_count, rdnc_block_count,
+        create_task_slot_num, recover_task_slot_num);
 
     // ec create bench
-    docacxx::BufInventory src_buf_inv(dev, max_create_task_num * (data_block_count * block_size),
-        max_create_task_num);
-    docacxx::BufInventory dst_buf_inv(dev, max_create_task_num * (rdnc_block_count * block_size),
-        max_create_task_num);
+    docacxx::BufInventoryWithMmap src_buf_inv(dev, create_task_slot_num * (data_block_count * block_size),
+        create_task_slot_num);
+    docacxx::BufInventoryWithMmap dst_buf_inv(dev, create_task_slot_num * (rdnc_block_count * block_size),
+        create_task_slot_num);
     for (size_t i{}; i < src_buf_inv.size(); ++i) {
         src_buf_inv.data()[i] = random();
     }
 
     std::vector<std::unique_ptr<docacxx::Buffer>> src_bufs;
-    src_bufs.reserve(max_create_task_num);
-    for (size_t i{}; i < max_create_task_num; ++i) {
+    src_bufs.reserve(create_task_slot_num);
+    for (size_t i{}; i < create_task_slot_num; ++i) {
         auto buf_len = data_block_count * block_size;
         src_bufs.emplace_back(src_buf_inv.get_buf(i * buf_len, buf_len));
         src_bufs.back()->set_doca_buf_data(buf_len);
     }
 
     std::vector<std::unique_ptr<docacxx::Buffer>> dst_bufs;
-    dst_bufs.reserve(max_create_task_num);
-    for (size_t i{}; i < max_create_task_num; ++i) {
+    dst_bufs.reserve(create_task_slot_num);
+    for (size_t i{}; i < create_task_slot_num; ++i) {
         auto buf_len = rdnc_block_count * block_size;
         dst_bufs.emplace_back(dst_buf_inv.get_buf(i * buf_len, buf_len));
     }
 
-    auto start = Timer::now();
-    encoder.create(src_bufs, dst_bufs);
-
+    auto create_time = clock([&] {
+        coder.create(src_bufs, dst_bufs);
+    });
     for (size_t i{1}; i < repeat_time; ++i) {
         for (auto &dst_buf : dst_bufs) {
             dst_buf->clear_doca_buf_data();
         }
-        encoder.create(src_bufs, dst_bufs);
+        create_time += clock([&] {
+            coder.create(src_bufs, dst_bufs);
+        });
     }
-
-    auto end = Timer::now();
-    auto create_time = duration_cast<Duration>(end - start);
 
     // ec recover bench
     size_t intact_block_count = data_block_count - rdnc_block_count;
@@ -148,47 +152,48 @@ int main(int argc, char **argv) {
         missing_indices.emplace_back(i + intact_block_count);
     }
 
-    docacxx::BufInventory available_buf_inv(dev,
-        max_recover_task_num * (data_block_count * block_size), max_recover_task_num);
-    docacxx::BufInventory recovered_buf_inv(dev,
-        max_recover_task_num * (rdnc_block_count * block_size), max_recover_task_num);
+    docacxx::BufInventoryWithMmap available_buf_inv(dev,
+        recover_task_slot_num * (data_block_count * block_size), recover_task_slot_num);
+    docacxx::BufInventoryWithMmap recovered_buf_inv(dev,
+        recover_task_slot_num * (rdnc_block_count * block_size), recover_task_slot_num);
     
     std::vector<std::unique_ptr<docacxx::Buffer>> available_bufs;
-    available_bufs.reserve(max_recover_task_num);
-    for (size_t i{}; i < max_recover_task_num; ++i) {
+    available_bufs.reserve(recover_task_slot_num);
+    for (size_t i{}; i < recover_task_slot_num; ++i) {
         size_t buf_len = data_block_count * block_size;
         available_bufs.emplace_back(available_buf_inv.get_buf(i * buf_len, buf_len));
         auto &buf = available_bufs.back();
         
-        std::memcpy(buf->m_mem, src_bufs[i]->m_mem, intact_block_count * block_size);
-        std::memcpy(buf->m_mem + intact_block_count * block_size,
-            dst_bufs[i]->m_mem, rdnc_block_count * block_size);
+        std::memcpy(buf->data(), src_bufs[i]->data(), intact_block_count * block_size);
+        std::memcpy(buf->data() + intact_block_count * block_size,
+            dst_bufs[i]->data(), rdnc_block_count * block_size);
         buf->set_doca_buf_data(buf_len);
     }
 
     std::vector<std::unique_ptr<docacxx::Buffer>> recovered_bufs;
-    recovered_bufs.reserve(max_recover_task_num);
-    for (size_t i{}; i < max_recover_task_num; ++i) {
+    recovered_bufs.reserve(recover_task_slot_num);
+    for (size_t i{}; i < recover_task_slot_num; ++i) {
         size_t buf_len = rdnc_block_count * block_size;
         recovered_bufs.emplace_back(recovered_buf_inv.get_buf(i * buf_len, buf_len));
     }
 
-    start = Timer::now();
-    encoder.recover(available_bufs, recovered_bufs, missing_indices);
+    auto recover_time = clock([&] {
+        coder.recover(available_bufs, recovered_bufs, missing_indices);
+    });
     for (size_t i{1}; i < repeat_time; ++i) {
         for (auto &recovered_buf : recovered_bufs) {
             recovered_buf->clear_doca_buf_data();
         }
-        encoder.recover(available_bufs, recovered_bufs, missing_indices);
+        recover_time += clock([&] {
+        coder.recover(available_bufs, recovered_bufs, missing_indices);
+    });
     }
 
-    end = Timer::now();
-    auto recover_time = duration_cast<Duration>(end - start);
-
     // test recover
-    for (size_t i{}; i < max_recover_task_num; ++i) {
-        std::string_view a = recovered_bufs[i]->get_doca_buf_data();
-        std::string_view b(src_bufs[i]->m_mem + intact_block_count * block_size,
+    for (size_t i{}; i < recover_task_slot_num; ++i) {
+        auto doca_buf_data = recovered_bufs[i]->get_doca_buf_data();
+        std::string_view a(doca_buf_data.first, doca_buf_data.second);
+        std::string_view b(src_bufs[i]->data() + intact_block_count * block_size,
             rdnc_block_count * block_size);
         if (a != b) {
             std::cerr << "Failed to recover" << std::endl;
@@ -208,18 +213,16 @@ int main(int argc, char **argv) {
     json["rdnc_block_count"] = rdnc_block_count;
     json["block_size"] = block_size;
     
-    json["create"]["task_num"] = max_create_task_num;
-    json["create"]["count"] = max_create_task_num * repeat_time;
-    json["create"]["time"] = duration_str(create_time);
+    json["create"]["task_slot_num"] = create_task_slot_num;
+    json["create"]["count"] = create_task_slot_num * repeat_time;
+    json["create"]["time"] = duration_str(duration_cast<Duration>(create_time));
 
-    json["recover"]["task_num"] = max_recover_task_num;
-    json["recover"]["count"] = max_recover_task_num * repeat_time;
-    json["recover"]["time"] = duration_str(recover_time);
+    json["recover"]["task_slot_num"] = recover_task_slot_num;
+    json["recover"]["count"] = recover_task_slot_num * repeat_time;
+    json["recover"]["time"] = duration_str(duration_cast<Duration>(recover_time));
 
     std::cout << json.dump(4) << std::endl;
     output_fs << json.dump(4) << std::endl;
     output_fs.close();
-
-    // close dev
     return 0;
 }

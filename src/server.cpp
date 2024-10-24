@@ -1,5 +1,5 @@
 #include "docacxx/doca_utils.h"
-#include "docacxx/server.h"
+#include "docacxx/ctx/server.h"
 
 #include <doca_comch_producer.h>
 #include <doca_error.h>
@@ -25,7 +25,7 @@ Server::Server(
             m_inner, new_consumer_cb, expired_consumer_cb),
         "failed to register consumer event");
 
-    check_derr(doca_comch_server_task_send_set_conf(m_inner, send_cb, send_error_cb, cfg.m_max_send_task_num),
+    check_derr(doca_comch_server_task_send_set_conf(m_inner, send_cb, send_error_cb, cfg.m_max_send_task_slot_num),
         "failed to set send task conf");
     check_derr(doca_comch_server_event_msg_recv_register(m_inner, recv_cb),
         "failed to register recv msg event");
@@ -37,16 +37,6 @@ Server::Server(
     //     "failed to set max queue size");
 }
 
-doca_task *Server::alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len) {
-    doca_comch_task_send *task{};
-    auto result = doca_comch_server_task_send_alloc_init(m_inner, peer, msg, len, &task);
-    if (result == DOCA_ERROR_NO_MEMORY) {
-        return nullptr;
-    }
-    check_derr(result, "failed to alloc send task");
-    return doca_comch_task_send_as_task(task);
-}
-
 void Server::clean_impl() {
     auto result = doca_comch_server_destroy(m_inner);
     if (result != DOCA_SUCCESS) {
@@ -55,41 +45,57 @@ void Server::clean_impl() {
     }
 }
 
+std::unique_ptr<Task> Server::alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len,
+    Task::CompleteCallback cb) {
+    doca_comch_task_send *task{};
+
+    check_derr(doca_comch_server_task_send_alloc_init(m_inner, peer, msg, len, &task),
+        "failed to alloc comch send task");
+    return std::make_unique<Task>(doca_comch_task_send_as_task(task), std::move(cb));
+}
+
 Server *Server::from_conn_to_server(doca_comch_connection *comch_connection) {
-    auto *server_ctx = doca_comch_server_get_server_ctx(comch_connection);
-    doca_data ctx_user_data{};
+    auto *raw_server = doca_comch_server_get_server_ctx(comch_connection);
+    doca_data ctx_data{};
     check_derr(
         doca_ctx_get_user_data(
-            doca_comch_server_as_ctx(server_ctx), &ctx_user_data),
+            doca_comch_server_as_ctx(raw_server), &ctx_data),
         "failed to get user data of ctx");
-    return (Server *)ctx_user_data.ptr;
+    return (Server *)ctx_data.ptr;
 }
 
 void Server::send_cb(
-    doca_comch_task_send *task,
-    doca_data task_user_data,
-    doca_data ctx_user_data) {
-    doca_task_free(doca_comch_task_send_as_task(task));
-    auto *server = (Server *)ctx_user_data.ptr;
-    server->m_custom_send_error_cb();
+    doca_comch_task_send *raw_send_task,
+    doca_data task_data,
+    doca_data ctx_data) {
+    std::unique_ptr<Task> task;
+    task.reset((Task *)task_data.ptr);
+    task->callback();
+    task.reset();
+
+    auto *server = (Server *)ctx_data.ptr;
+    server->m_send_cb();
 }
 
 void Server::send_error_cb(
-    doca_comch_task_send *task,
-    doca_data task_user_data,
-    doca_data ctx_user_data) {
-    doca_task_free(doca_comch_task_send_as_task(task));
-    auto *server = (Server *)ctx_user_data.ptr;
-    server->m_custom_send_error_cb();
+    doca_comch_task_send *raw_send_task,
+    doca_data task_data,
+    doca_data ctx_data) {
+    std::unique_ptr<Task> task;
+    task.reset((Task *)task_data.ptr);
+    task.reset();
+
+    auto *server = (Server *)ctx_data.ptr;
+    server->m_send_error_cb();
 }
 
 void Server::recv_cb(
     doca_comch_event_msg_recv *,
-    uint8_t *recv_buffer,
+    uint8_t *msg_addr,
     uint32_t msg_len,
     struct doca_comch_connection *comch_connection) {
     auto *server = from_conn_to_server(comch_connection);
-    server->m_custom_recv_cb(recv_buffer, msg_len, comch_connection);
+    server->m_recv_cb(comch_connection, msg_addr, msg_len);
 }
 
 void Server::new_conn_cb(
@@ -97,7 +103,7 @@ void Server::new_conn_cb(
     doca_comch_connection *comch_connection,
     uint8_t change_success) {
     auto *server = from_conn_to_server(comch_connection);
-    server->m_custom_new_conn_cb(comch_connection);
+    server->m_new_conn_cb(comch_connection);
 }
 
 void Server::disconn_cb(
@@ -105,7 +111,7 @@ void Server::disconn_cb(
     doca_comch_connection *comch_connection,
     uint8_t change_success) {
     auto *server = from_conn_to_server(comch_connection);
-    server->m_custom_disconn_cb(comch_connection);
+    server->m_disconn_cb(comch_connection);
 }
 
 void Server::new_consumer_cb(
@@ -113,7 +119,7 @@ void Server::new_consumer_cb(
     doca_comch_connection *comch_connection,
     uint32_t id) {
     auto *server = from_conn_to_server(comch_connection);
-    server->m_custom_new_consumer_cb(comch_connection, id);
+    server->m_new_consumer_cb(comch_connection, id);
 }
 
 void Server::expired_consumer_cb(
@@ -121,7 +127,7 @@ void Server::expired_consumer_cb(
     doca_comch_connection *comch_connection,
     uint32_t id) {
     auto *server = from_conn_to_server(comch_connection);
-    server->m_custom_expired_consumer_cb(comch_connection, id);
+    server->m_expired_consumer_cb(comch_connection, id);
 }
 }
 }

@@ -1,17 +1,19 @@
-#include "compressor.h"
-#include "docacxx/mem.h"
-#include "../part_iterator.h"
-#include "../print_util.h"
 #include <argparse/argparse.hpp>
+#include <chrono>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <stdexcept>
 
-using namespace std::chrono;
-using Timer = std::chrono::high_resolution_clock;
-using Duration = std::chrono::microseconds;
+#include "clock.h"
+#include "compressor.h"
+#include "docacxx/mem.h"
+#include "scoped_guard.h"
+#include "part_iterator.h"
+#include "print_util.h"
 
+using namespace std::chrono;
+using Duration = std::chrono::microseconds;
 using Json = nlohmann::json;
 
 std::string dev_pci_addr;
@@ -19,7 +21,7 @@ size_t block_size;
 std::string input_file;
 std::string output_file;
 std::string algorithm;
-size_t max_decompress_task_num;
+size_t decompress_task_slot_num;
 
 void read_args(int argc, char **argv) {
     argparse::ArgumentParser program("compress_bench");
@@ -59,7 +61,7 @@ void read_args(int argc, char **argv) {
     input_file = program.get<std::string>("-i");
     output_file = program.get<std::string>("-o");
     algorithm = program.get<std::string>("-r");
-    max_decompress_task_num = program.get<size_t>("-n");
+    decompress_task_slot_num = program.get<size_t>("-n");
 
     std::cout << "Device pci address: " << dev_pci_addr << std::endl;
     std::cout << "Block size: " << block_size << std::endl;
@@ -69,7 +71,7 @@ void read_args(int argc, char **argv) {
 }
 
 std::vector<std::unique_ptr<docacxx::Buffer>> compress(const std::string &in_data,
-    docacxx::BufInventory &buf_inv, Compressor &compressor) {
+    docacxx::BufInventoryWithMmap &buf_inv, Compressor &compressor) {
     std::vector<std::unique_ptr<docacxx::Buffer>> compressed_blocks;
     PartIterator in_part_iter(in_data.size(), block_size);
     PartIterator out_part_iter(buf_inv.size(), compressor.compress_bound(block_size));
@@ -81,8 +83,8 @@ std::vector<std::unique_ptr<docacxx::Buffer>> compress(const std::string &in_dat
         compressed_blocks.emplace_back(buf_inv.get_buf(out_offset, out_len));
         auto &buf = compressed_blocks.back();
 
-        auto clen = compressor.compress(in_data.data() + in_offset, buf->m_mem,
-            in_len, buf->m_size);
+        auto clen = compressor.compress(in_data.data() + in_offset, buf->data(),
+            in_len, buf->size());
         buf->set_doca_buf_data(clen);
     }
 
@@ -120,13 +122,16 @@ int main(int argc, char **argv) {
     doca_dev *dev{};
     docacxx::check_derr(docacxx::open_doca_device_with_pci(dev_pci_addr.data(), &dev),
             "failed to open dev");
+    ScopeGuard guard([&] {
+        docacxx::check_derr(doca_dev_close(dev), "failed to close dev");
+    });
 
     // create compressor
     std::unique_ptr<Compressor> compressor;
     if (algorithm == "lz4") {
-        compressor = std::make_unique<Lz4Compressor>(dev, max_decompress_task_num);
+        compressor = std::make_unique<Lz4Compressor>(dev, decompress_task_slot_num);
     } else if (algorithm == "deflate") {
-        compressor = std::make_unique<DeflateCompressor>(dev, max_decompress_task_num);
+        compressor = std::make_unique<DeflateCompressor>(dev, decompress_task_slot_num);
     } else {
         std::cerr << "Unsupported algorithm" << std::endl;
         exit(EXIT_FAILURE); 
@@ -134,9 +139,9 @@ int main(int argc, char **argv) {
 
     // create doca buf inv
     size_t block_num = (file_size + block_size - 1) / block_size;
-    docacxx::BufInventory src_buf_inv(dev, block_num * compressor->compress_bound(block_size),
+    docacxx::BufInventoryWithMmap src_buf_inv(dev, block_num * compressor->compress_bound(block_size),
         block_num);
-    docacxx::BufInventory dst_buf_inv(dev, block_num * block_size, block_num);
+    docacxx::BufInventoryWithMmap dst_buf_inv(dev, block_num * block_size, block_num);
 
     // create compressed source data
     std::vector<std::unique_ptr<docacxx::Buffer>> compressed_blocks = compress(file_data, src_buf_inv,
@@ -150,10 +155,9 @@ int main(int argc, char **argv) {
         decompressed_blocks.emplace_back(dst_buf_inv.get_buf(offset, len));
     }
 
-    auto start = Timer::now();
-    compressor->decompress(compressed_blocks, decompressed_blocks);
-    auto end = Timer::now();
-    auto decompress_time = duration_cast<Duration>(end - start);
+    auto decompress_time = clock([&] {
+        compressor->decompress(compressed_blocks, decompressed_blocks);
+    });
 
     // test
     std::string_view result(dst_buf_inv.data(), file_size);
@@ -175,9 +179,9 @@ int main(int argc, char **argv) {
     json["file_size"] = file_size;
     json["block_size"] = block_size;
     
-    json["decompress"]["task_num"] = max_decompress_task_num;
+    json["decompress"]["task_slot_num"] = decompress_task_slot_num;
     json["decompress"]["count"] = compressed_blocks.size();
-    json["decompress"]["time"] = duration_str(decompress_time);
+    json["decompress"]["time"] = duration_str(duration_cast<Duration>(decompress_time));
 
     std::cout << json.dump(4) << std::endl;
     output_fs << json.dump(4) << std::endl;

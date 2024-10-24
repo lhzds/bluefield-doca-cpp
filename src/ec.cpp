@@ -1,5 +1,6 @@
-#include "docacxx/ec.h"
+#include "docacxx/ctx/ec.h"
 #include <doca_erasure_coding.h>
+#include <doca_types.h>
 #include <iostream>
 
 namespace docacxx {
@@ -9,13 +10,13 @@ Ec::Ec(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
     init_ctx(doca_ec_as_ctx(m_inner), pe);
     check_derr(doca_ec_task_create_set_conf(m_inner,
         create_cb, create_error_cb,
-        cfg.m_create_task_num), "failed to set ec create task conf");
+        cfg.m_create_task_slot_num), "failed to set ec create task conf");
     check_derr(doca_ec_task_update_set_conf(m_inner,
         update_cb, update_error_cb,
-        cfg.m_update_task_num), "failed to set ec update task conf");
+        cfg.m_update_task_slot_num), "failed to set ec update task conf");
     check_derr(doca_ec_task_recover_set_conf(m_inner,
         recover_cb, recover_error_cb,
-        cfg.m_recover_task_num), "failed to set ec recover task conf");
+        cfg.m_recover_task_slot_num), "failed to set ec recover task conf");
 }
 
 void Ec::clean_impl() {
@@ -31,7 +32,6 @@ doca_ec_matrix *Ec::create_matrix(doca_ec_matrix_type type,
     doca_ec_matrix *matrix{};
     check_derr(doca_ec_matrix_create(m_inner, type, data_block_count, rdnc_block_count, &matrix),
         "failed to create matrix");
-
     return matrix;
 }
 
@@ -47,87 +47,96 @@ void Ec::destroy_matrix(doca_ec_matrix *matrix) {
     check_derr(doca_ec_matrix_destroy(matrix), "failed to destroy matrix");
 }
 
-doca_task *Ec::alloc_create_task(const doca_ec_matrix *matrix,
-    const doca_buf *src, doca_buf *dst, doca_data task_user_data) {
+std::unique_ptr<Task> Ec::alloc_create_task(const doca_ec_matrix *matrix,
+        const Buffer &src, Buffer &dst, Task::CompleteCallback cb) {
     doca_ec_task_create *task{};
-    auto result = doca_ec_task_create_allocate_init(m_inner, matrix, src, dst,
-        task_user_data, &task);
-    if (result == DOCA_ERROR_NO_MEMORY) {
-        return nullptr;
-    }
-    check_derr(result, "failed to alloc ec create task");
-    return doca_ec_task_create_as_task(task);
+    check_derr(doca_ec_task_create_allocate_init(m_inner, matrix, src.raw(),
+        dst.raw(), doca_data{}, &task), "failed to alloc ec create task");
+    return std::make_unique<Task>(doca_ec_task_create_as_task(task), std::move(cb));
 }
 
-doca_task *Ec::alloc_update_task(const doca_ec_matrix *matrix,
-    const doca_buf *src, doca_buf *dst, doca_data task_user_data) {
+std::unique_ptr<Task> Ec::alloc_update_task(const doca_ec_matrix *matrix,
+        const Buffer &src, Buffer &dst, Task::CompleteCallback cb) {
     doca_ec_task_update *task{};
-    auto result = doca_ec_task_update_allocate_init(m_inner, matrix, src, dst,
-        task_user_data, &task);
-    if (result == DOCA_ERROR_NO_MEMORY) {
-        return nullptr;
-    }
-    check_derr(result, "failed to alloc ec update task");
-    return doca_ec_task_update_as_task(task);
+    check_derr(doca_ec_task_update_allocate_init(m_inner, matrix, src.raw(),
+        dst.raw(), doca_data{}, &task), "failed to alloc ec update task");
+    return std::make_unique<Task>(doca_ec_task_update_as_task(task), std::move(cb));
 }
 
-doca_task *Ec::alloc_recover_task(const doca_ec_matrix *matrix,
-    const doca_buf *src, doca_buf *dst, doca_data task_user_data) {
+std::unique_ptr<Task> Ec::alloc_recover_task(const doca_ec_matrix *matrix,
+        const Buffer &src, Buffer &dst, Task::CompleteCallback cb) {
     doca_ec_task_recover *task{};
-    auto result = doca_ec_task_recover_allocate_init(m_inner, matrix, src, dst,
-        task_user_data, &task);
-    if (result == DOCA_ERROR_NO_MEMORY) {
-        return nullptr;
-    }
-    check_derr(result, "failed to alloc ec recover task");
-    return doca_ec_task_recover_as_task(task);
+    check_derr(doca_ec_task_recover_allocate_init(m_inner, matrix, src.raw(),
+        dst.raw(), doca_data{}, &task), "failed to alloc ec recover task");
+    return std::make_unique<Task>(doca_ec_task_recover_as_task(task), std::move(cb));
 }
 
-void Ec::create_cb(doca_ec_task_create *task,
-    doca_data task_user_data,
-    doca_data ctx_user_data) {
-    doca_task_free(doca_ec_task_create_as_task(task));
-    auto *ec = (Ec *)ctx_user_data.ptr;
-    ec->m_custom_create_cb(task_user_data);
+void Ec::create_cb(doca_ec_task_create *raw_create_task,
+    doca_data task_data,
+    doca_data ctx_data) {
+    auto *ec = (Ec *)ctx_data.ptr;
+    std::unique_ptr<Task> task;
+    task.reset((Task *)task_data.ptr);
+    task->callback();
+    task.reset();
+
+    ec->m_create_cb();
 }
 
-void Ec::create_error_cb(doca_ec_task_create *task,
-    doca_data task_user_data,
-    doca_data ctx_user_data) {
-    doca_task_free(doca_ec_task_create_as_task(task));
-    auto *ec = (Ec *)ctx_user_data.ptr;
-    ec->m_custom_create_error_cb(task_user_data);
+void Ec::create_error_cb(doca_ec_task_create *raw_create_task,
+    doca_data task_data,
+    doca_data ctx_data) {
+    auto *ec = (Ec *)ctx_data.ptr;
+    std::unique_ptr<Task> task;
+    task.reset((Task *)task_data.ptr);
+    task.reset();
+
+    ec->m_create_error_cb();
 }
 
-void Ec::update_cb(doca_ec_task_update *task,
-    doca_data task_user_data,
-    doca_data ctx_user_data) {
-    doca_task_free(doca_ec_task_update_as_task(task));
-    auto *ec = (Ec *)ctx_user_data.ptr;
-    ec->m_custom_update_cb(task_user_data);
+void Ec::update_cb(doca_ec_task_update *raw_update_task,
+    doca_data task_data,
+    doca_data ctx_data) {
+    auto *ec = (Ec *)ctx_data.ptr;
+    std::unique_ptr<Task> task;
+    task.reset((Task *)task_data.ptr);
+    task->callback();
+    task.reset();
+
+    ec->m_update_cb();
 }
 
-void Ec::update_error_cb(doca_ec_task_update *task,
-    doca_data task_user_data,
-    doca_data ctx_user_data) {
-    doca_task_free(doca_ec_task_update_as_task(task));
-    auto *ec = (Ec *)ctx_user_data.ptr;
-    ec->m_custom_update_error_cb(task_user_data);
+void Ec::update_error_cb(doca_ec_task_update *raw_update_task,
+    doca_data task_data,
+    doca_data ctx_data) {
+    auto *ec = (Ec *)ctx_data.ptr;
+    std::unique_ptr<Task> task;
+    task.reset((Task *)task_data.ptr);
+    task.reset();
+
+    ec->m_update_error_cb();
 }
 
-void Ec::recover_cb(doca_ec_task_recover *task,
-    doca_data task_user_data,
-    doca_data ctx_user_data) {
-    doca_task_free(doca_ec_task_recover_as_task(task));
-    auto *ec = (Ec *)ctx_user_data.ptr;
-    ec->m_custom_recover_cb(task_user_data);
+void Ec::recover_cb(doca_ec_task_recover *raw_recover_task,
+    doca_data task_data,
+    doca_data ctx_data) {
+    std::unique_ptr<Task> task;
+    task.reset((Task *)task_data.ptr);
+    task->callback();
+    task.reset();
+
+    auto *ec = (Ec *)ctx_data.ptr;
+    ec->m_recover_cb();
 }
 
-void Ec::recover_error_cb(doca_ec_task_recover *task,
-    doca_data task_user_data,
-    doca_data ctx_user_data) {
-    doca_task_free(doca_ec_task_recover_as_task(task));
-    auto *ec = (Ec *)ctx_user_data.ptr;
-    ec->m_custom_recover_error_cb(task_user_data);
+void Ec::recover_error_cb(doca_ec_task_recover *raw_recover_task,
+    doca_data task_data,
+    doca_data ctx_data) {
+    std::unique_ptr<Task> task;
+    task.reset((Task *)task_data.ptr);
+    task.reset();
+
+    auto *ec = (Ec *)ctx_data.ptr;
+    ec->m_recover_error_cb();
 }
 }

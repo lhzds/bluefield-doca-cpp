@@ -2,7 +2,7 @@ import os
 import subprocess
 from tqdm import tqdm
 
-exe = os.path.expanduser("~/docacxx/build/linux/arm64-v8a/release/compress_bench")
+exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/compress_bench")
 input_file =os.path.expanduser("~/workload/linux-5.10.100.tar")
 output_dir = os.path.expanduser("~/docacxx/bench_result/comp")
 if not os.path.exists(output_dir):
@@ -12,7 +12,7 @@ if not os.path.exists(output_dir):
 algs = ["deflate", "lz4"]
 
 # dev_pci
-dev_pci = "03:00.1"
+dev_pci = "cb:00.0"
 
 # block size
 kb = 1024

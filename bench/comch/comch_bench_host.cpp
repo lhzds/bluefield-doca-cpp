@@ -1,19 +1,15 @@
-#include "comch.h"
-#include "docacxx/mem.h"
 #include <argparse/argparse.hpp>
 #include <memory>
 #include <nlohmann/json.hpp>
-
-using namespace std::chrono;
-using Timer = std::chrono::high_resolution_clock;
-using Duration = std::chrono::microseconds;
-using Json = nlohmann::json;
+#include "comch.h"
+#include "docacxx/mem.h"
+#include "scoped_guard.h"
 
 const char *SERVER_NAME{"bench_server"};
 
 std::string dev_pci_addr;
 size_t msg_size;
-size_t max_comch_task_num;
+size_t comch_task_slot_num;
 
 size_t repeat_time;
 
@@ -43,17 +39,17 @@ void read_args(int argc, char **argv) {
 
     dev_pci_addr = program.get<std::string>("-a");
     msg_size = program.get<size_t>("-b");
-    max_comch_task_num = program.get<size_t>("-c");
+    comch_task_slot_num = program.get<size_t>("-c");
 
-    if (max_comch_task_num >= 128) {
+    if (comch_task_slot_num >= 128) {
         repeat_time = 1;
     } else {
-        repeat_time = 128 / max_comch_task_num + 1;
+        repeat_time = 128 / comch_task_slot_num + 1;
     }
 
     std::cout << "Device pci address: " << dev_pci_addr << std::endl;
     std::cout << "Msg size: " << msg_size << std::endl;
-    std::cout << "Max comch task num: " << max_comch_task_num << std::endl;
+    std::cout << "Comch task slot num: " << comch_task_slot_num << std::endl;
 }
 
 int main(int argc, char **argv) {
@@ -63,34 +59,37 @@ int main(int argc, char **argv) {
     doca_dev *dev{};
     docacxx::check_derr(docacxx::open_doca_device_with_pci(dev_pci_addr.data(), &dev),
             "failed to open dev");
+    ScopeGuard guard([&] {
+        docacxx::check_derr(doca_dev_close(dev), "failed to close dev");
+    });
 
     // create doca buf inv
-    docacxx::BufInventory send_buf_inv(dev, max_comch_task_num * msg_size,
-        max_comch_task_num);
-    docacxx::BufInventory recv_buf_inv(dev, max_comch_task_num * msg_size,
-        max_comch_task_num);
+    docacxx::BufInventoryWithMmap send_buf_inv(dev, comch_task_slot_num * msg_size,
+        comch_task_slot_num);
+    docacxx::BufInventoryWithMmap recv_buf_inv(dev, comch_task_slot_num * msg_size,
+        comch_task_slot_num);
     for (size_t i{}; i < send_buf_inv.size(); ++i) {
         send_buf_inv.data()[i] = i % 100;
     }
 
     // create buffers
     std::vector<std::unique_ptr<docacxx::Buffer>> send_bufs;
-    send_bufs.reserve(max_comch_task_num);
-    for (size_t i{}; i < max_comch_task_num; ++i) {
+    send_bufs.reserve(comch_task_slot_num);
+    for (size_t i{}; i < comch_task_slot_num; ++i) {
         auto buf_len = msg_size;
         send_bufs.emplace_back(send_buf_inv.get_buf(i * buf_len, buf_len));
         send_bufs.back()->set_doca_buf_data(buf_len);
     }
 
     std::vector<std::unique_ptr<docacxx::Buffer>> recv_bufs;
-    recv_bufs.reserve(max_comch_task_num);
-    for (size_t i{}; i < max_comch_task_num; ++i) {
+    recv_bufs.reserve(comch_task_slot_num);
+    for (size_t i{}; i < comch_task_slot_num; ++i) {
         auto buf_len = msg_size;
         recv_bufs.emplace_back(recv_buf_inv.get_buf(i * buf_len, buf_len));
     }
 
     // create context
-    HostEnd host_end(SERVER_NAME, dev, recv_buf_inv.raw_mmap(), max_comch_task_num, max_comch_task_num);
+    HostEnd host_end(SERVER_NAME, dev, recv_buf_inv.mmap(), comch_task_slot_num, comch_task_slot_num);
 
     // bench
     host_end.recv(recv_bufs);
@@ -103,6 +102,5 @@ int main(int argc, char **argv) {
         host_end.send(send_bufs);
     }
     
-    // close dev
     return 0;
 }

@@ -2,7 +2,7 @@ import os
 import subprocess
 from tqdm import tqdm
 
-exe = os.path.expanduser("/home/olh/repos/docacxx/build/linux/x86_64/release/ec_bench")
+exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/ec_bench")
 output_dir = os.path.expanduser("~/docacxx/bench_result/ec")
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
