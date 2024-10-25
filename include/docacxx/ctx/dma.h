@@ -14,10 +14,16 @@ public:
     struct Cfg {
         size_t m_memcpy_task_slot_num{};
     };
+    struct Cap {
+        size_t m_max_buf_size;
+    };
 
     Dma(doca_pe *pe, doca_dev *dev, const Cfg &cfg);
     virtual ~Dma() = default;
 
+    const Cap &cap() const noexcept {
+        return m_cap;
+    }
     doca_dma *raw() noexcept {
         return m_inner;
     }
@@ -47,6 +53,8 @@ private:
 		doca_data ctx_user_data);
 
     doca_dma *m_inner{};
+    Cap m_cap{};
+
     CompleteCallback m_memcpy_cb{[]() {}};
     CompleteCallback m_memcpy_error_cb{[]() {
         throw std::runtime_error("memcpy error.");

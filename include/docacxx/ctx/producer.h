@@ -21,7 +21,7 @@ public:
     };
     struct Cap {
         uint32_t m_max_send_task_slot_num{};
-        uint32_t m_max_buf_len{};
+        uint32_t m_max_buf_size{};
     };
 
     Producer(doca_comch_connection *peer_conn, doca_pe *pe,

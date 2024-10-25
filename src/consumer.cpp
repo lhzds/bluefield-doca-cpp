@@ -16,7 +16,7 @@ Consumer::Consumer(
     // get cap
     doca_devinfo *dev_info = doca_dev_as_devinfo(dev);
     doca_comch_consumer_cap_get_max_num_tasks(dev_info, &m_cap.m_max_recv_task_slot_num);
-    doca_comch_consumer_cap_get_max_buf_size(dev_info, &m_cap.m_max_buf_len);
+    doca_comch_consumer_cap_get_max_buf_size(dev_info, &m_cap.m_max_buf_size);
     assert(cfg.m_recv_task_slot_num <= m_cap.m_max_recv_task_slot_num);
 
     // create context
