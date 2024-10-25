@@ -34,12 +34,8 @@ public:
     void recv(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
         m_recv_ctx.reset();
 
-        for (size_t i{}; i < std::min(bufs.size(), m_recv_ctx.task_slot_num()); ++i) {
-            auto task = m_inner->alloc_recv_task(*bufs[i], nullptr);
-            m_inner->submit(std::move(task));
-        }
-        for (size_t i = m_recv_ctx.task_slot_num(); i < bufs.size(); ++i) {
-            m_recv_ctx.add_submit_event([&, i] {
+        for (size_t i{}; i < bufs.size(); ++i) {
+            m_recv_ctx.submit([&, i] {
                 auto task = m_inner->alloc_recv_task(*bufs[i], nullptr);
                 m_inner->submit(std::move(task));
             });
@@ -79,16 +75,8 @@ public:
     void send(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
         m_send_ctx.reset();
 
-        for (size_t i{}; i < std::min(bufs.size(), m_send_ctx.task_slot_num()); ++i) {
-            auto task = m_inner->alloc_send_task(*bufs[i], nullptr, 0, m_consumer_id, nullptr);
-            auto ret = m_inner->submit(std::move(task));
-            while (ret) {
-                doca_pe_progress(m_pe);
-                m_inner->submit(std::move(*ret));
-            }
-        }
-        for (size_t i = m_send_ctx.task_slot_num(); i < bufs.size(); ++i) {
-            m_send_ctx.add_submit_event([&, i] {
+        for (size_t i{}; i < bufs.size(); ++i) {
+            m_send_ctx.submit([&, i] {
                 auto task = m_inner->alloc_send_task(*bufs[i], nullptr, 0, m_consumer_id, nullptr);
                 auto ret = m_inner->submit(std::move(task));
                 while (ret) {

@@ -38,12 +38,8 @@ public:
         m_decompress_ctx.reset();
         assert(src.size() == dst.size());
 
-        for (size_t i{}; i < std::min(src.size(), m_decompress_ctx.task_slot_num()); ++i) {
-            auto task = m_decompressor->alloc_decompress_task(*src[i], *dst[i], nullptr);
-            m_decompressor->submit(std::move(task));
-        }
-        for (size_t i = m_decompress_ctx.task_slot_num(); i < src.size(); ++i) {
-            m_decompress_ctx.add_submit_event([&, i] {
+        for (size_t i{}; i < src.size(); ++i) {
+            m_decompress_ctx.submit([&, i] {
                 auto task = m_decompressor->alloc_decompress_task(*src[i], *dst[i], nullptr);
                 m_decompressor->submit(std::move(task));
             });

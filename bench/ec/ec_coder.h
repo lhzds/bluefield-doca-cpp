@@ -39,12 +39,8 @@ public:
         assert(src.size() == dst.size());
         m_create_ctx.reset();
 
-        for (size_t i{}; i < std::min(src.size(), m_create_ctx.task_slot_num()); ++i) {
-            auto task = m_inner->alloc_create_task(m_create_matrix, *src[i], *dst[i], nullptr);
-            m_inner->submit(std::move(task));
-        }
-        for (size_t i = m_create_ctx.task_slot_num(); i < src.size(); ++i) {
-            m_create_ctx.add_submit_event([&, i] {
+        for (size_t i{}; i < src.size(); ++i) {
+            m_create_ctx.submit([&, i] {
                 auto task = m_inner->alloc_create_task(m_create_matrix, *src[i], *dst[i], nullptr);
                 m_inner->submit(std::move(task));
             });
@@ -62,12 +58,8 @@ public:
         doca_ec_matrix *recover_matrix = m_inner->create_recover_matrix(m_create_matrix, missing_indices);
         assert(recover_matrix);
 
-        for (size_t i{}; i < std::min(src.size(), m_recover_ctx.task_slot_num()); ++i) {
-            auto task = m_inner->alloc_recover_task(recover_matrix, *src[i], *dst[i], nullptr);
-            m_inner->submit(std::move(task));
-        }
-        for (size_t i = m_recover_ctx.task_slot_num(); i < src.size(); ++i) {
-            m_recover_ctx.add_submit_event([&, i] {
+        for (size_t i{}; i < src.size(); ++i) {
+            m_recover_ctx.submit([&, i] {
                 auto task = m_inner->alloc_recover_task(recover_matrix, *src[i], *dst[i], nullptr);
                 m_inner->submit(std::move(task));
             });
