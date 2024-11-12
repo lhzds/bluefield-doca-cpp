@@ -25,7 +25,7 @@ size_t comch_task_slot_num;
 size_t repeat_time;
 
 void read_args(int argc, char **argv) {
-    argparse::ArgumentParser program("ec_bench");
+    argparse::ArgumentParser program("comch_bench");
     
     program.add_argument("-a")
         .help("device pci address")

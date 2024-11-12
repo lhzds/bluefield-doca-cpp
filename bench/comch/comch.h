@@ -8,7 +8,7 @@
 #include "docacxx/ctx/consumer.h"
 #include "docacxx/ctx/producer.h"
 #include "docacxx/mem.h"
-#include "task_context.h"
+#include "docacxx/task_context.h"
 
 class SyncConsumer {
 public:

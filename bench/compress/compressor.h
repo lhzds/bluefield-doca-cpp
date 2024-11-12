@@ -10,7 +10,7 @@
 #include "docacxx/ctx/compress.h"
 #include "docacxx/doca_utils.h"
 #include "docacxx/mem.h"
-#include "task_context.h"
+#include "docacxx/task_context.h"
 
 class Compressor {
 public:
