@@ -19,7 +19,7 @@ public:
     };
 
     Dma(doca_pe *pe, doca_dev *dev, const Cfg &cfg);
-    virtual ~Dma() = default;
+    ~Dma() {};
 
     const Cap &cap() const noexcept {
         return m_cap;

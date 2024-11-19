@@ -21,4 +21,4 @@ target("comch_bench_host")
 target("comch_bench_dpu")
     set_kind("binary")
     add_files("comch/comch_bench_dpu.cpp")
-
+    

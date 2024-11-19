@@ -27,7 +27,7 @@ public:
 
     Consumer(doca_comch_connection *peer_conn, doca_pe *pe,
         doca_pe *conn_pe, Mmap &mmap, doca_dev *dev, const Cfg &cfg);
-    virtual ~Consumer() = default;
+    ~Consumer() {};
 
     doca_comch_consumer *raw() noexcept {
         return m_inner;

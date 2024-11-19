@@ -26,7 +26,7 @@ public:
 
     Producer(doca_comch_connection *peer_conn, doca_pe *pe,
         doca_dev *dev, const Cfg &cfg);
-    virtual ~Producer() = default;
+    ~Producer() {};
 
     doca_comch_producer *raw() noexcept {
         return m_inner;

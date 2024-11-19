@@ -19,7 +19,7 @@ public:
     };
 
     Ec(doca_pe *pe, doca_dev *dev, const Cfg &cfg);
-    virtual ~Ec() = default;
+    ~Ec() {};
 
     doca_ec *raw() noexcept {
         return m_inner;

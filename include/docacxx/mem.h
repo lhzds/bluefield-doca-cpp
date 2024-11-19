@@ -12,7 +12,8 @@
 namespace docacxx {
 class Mmap {
 public:
-    Mmap(doca_dev *dev, char *addr, size_t size, uint32_t access_mask)
+    Mmap(doca_dev *dev, char *addr, size_t size,
+        uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE)
         : m_addr(addr), m_size(size) {
         check_derr(doca_mmap_create(&m_inner), "failed to create mmap");
         check_derr(doca_mmap_add_dev(m_inner, dev), "failed to add dev to mmap");
@@ -23,7 +24,8 @@ public:
         check_derr(doca_mmap_start(m_inner), "failed to start mmap");
     }
 
-    Mmap(doca_dev *dev, size_t size, uint32_t access_mask)
+    Mmap(doca_dev *dev, size_t size,
+        uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE)
         : Mmap(dev, new char[size]{}, size, access_mask) {
         m_is_mem_owner = true;
     }
@@ -191,6 +193,13 @@ public:
         return std::make_unique<Buffer>(buf, data() + offset, size);
     }
 
+    std::unique_ptr<Buffer> get_buf(char *addr, size_t size) {
+        doca_buf *buf{};
+        check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, m_mmap->raw(), addr, size, &buf),
+            "failed to get doca buf");
+        return std::make_unique<Buffer>(buf, addr, size);
+    }
+
     size_t size() noexcept {
         return m_mmap->size();
     }
@@ -244,6 +253,13 @@ public:
         check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, mmap.raw(), mmap.data() + offset, size, &buf),
             "failed to get doca buf");
         return std::make_unique<Buffer>(buf, mmap.data() + offset, size);
+    }
+
+    std::unique_ptr<Buffer> get_buf(Mmap &mmap, char *addr, size_t size) {
+        doca_buf *buf{};
+        check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, mmap.raw(), addr, size, &buf),
+            "failed to get doca buf");
+        return std::make_unique<Buffer>(buf, addr, size);
     }
 
     doca_buf_inventory *raw() {

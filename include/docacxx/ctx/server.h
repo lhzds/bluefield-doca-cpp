@@ -28,7 +28,7 @@ public:
     };
 
     Server(std::string_view name, doca_dev *dev, doca_dev_rep *dev_rep, doca_pe *pe, const Cfg &cfg);
-    virtual ~Server() = default;
+    ~Server() {};
 
     doca_comch_server *raw() noexcept {
         return m_inner;

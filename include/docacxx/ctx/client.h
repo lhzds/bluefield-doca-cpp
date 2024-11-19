@@ -26,7 +26,7 @@ public:
     };
 
     Client(std::string_view server_name, doca_dev *dev, doca_pe *pe, const Cfg &cfg);
-    virtual ~Client() = default;
+    ~Client() {};
 
     doca_comch_client *raw() noexcept {
         return m_inner;

@@ -17,7 +17,7 @@ public:
     };
 
     Compress(doca_pe *pe, doca_dev *dev, const Cfg &cfg);
-    virtual ~Compress() = default;
+    ~Compress() {};
 
     doca_compress *raw() noexcept {
         return m_inner;
