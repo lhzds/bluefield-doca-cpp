@@ -47,34 +47,58 @@ void Ec::destroy_matrix(doca_ec_matrix *matrix) {
     check_derr(doca_ec_matrix_destroy(matrix), "failed to destroy matrix");
 }
 
-std::unique_ptr<Task> Ec::alloc_create_task(const doca_ec_matrix *matrix,
-        const Buffer &src, Buffer &dst, Task::CompleteCallback cb) {
+std::unique_ptr<Ec::CreateTask> Ec::alloc_create_task(const doca_ec_matrix *matrix,
+        const Buffer &src, Buffer &dst, CreateTask::CompleteCallback cb) {
     doca_ec_task_create *task{};
     check_derr(doca_ec_task_create_allocate_init(m_inner, matrix, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc ec create task");
-    return std::make_unique<Task>(doca_ec_task_create_as_task(task), std::move(cb));
+    return std::make_unique<Ec::CreateTask>(doca_ec_task_create_as_task(task), task, std::move(cb));
 }
 
-std::unique_ptr<Task> Ec::alloc_update_task(const doca_ec_matrix *matrix,
-        const Buffer &src, Buffer &dst, Task::CompleteCallback cb) {
+std::unique_ptr<Ec::CreateTask> Ec::submit(std::unique_ptr<CreateTask> task) {
+    auto *released = task.release();
+    if (not submit_impl(released->base_task())) {
+        return std::unique_ptr<Ec::CreateTask>(released);
+    }
+    return {};
+}
+
+std::unique_ptr<Ec::UpdateTask> Ec::alloc_update_task(const doca_ec_matrix *matrix,
+        const Buffer &src, Buffer &dst, UpdateTask::CompleteCallback cb) {
     doca_ec_task_update *task{};
     check_derr(doca_ec_task_update_allocate_init(m_inner, matrix, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc ec update task");
-    return std::make_unique<Task>(doca_ec_task_update_as_task(task), std::move(cb));
+    return std::make_unique<UpdateTask>(doca_ec_task_update_as_task(task), task, std::move(cb));
 }
 
-std::unique_ptr<Task> Ec::alloc_recover_task(const doca_ec_matrix *matrix,
-        const Buffer &src, Buffer &dst, Task::CompleteCallback cb) {
+std::unique_ptr<Ec::UpdateTask> Ec::submit(std::unique_ptr<UpdateTask> task) {
+    auto *released = task.release();
+    if (not submit_impl(released->base_task())) {
+        return std::unique_ptr<Ec::UpdateTask>(released);
+    }
+    return {};
+}
+
+std::unique_ptr<Ec::RecoverTask> Ec::alloc_recover_task(const doca_ec_matrix *matrix,
+        const Buffer &src, Buffer &dst, RecoverTask::CompleteCallback cb) {
     doca_ec_task_recover *task{};
     check_derr(doca_ec_task_recover_allocate_init(m_inner, matrix, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc ec recover task");
-    return std::make_unique<Task>(doca_ec_task_recover_as_task(task), std::move(cb));
+    return std::make_unique<RecoverTask>(doca_ec_task_recover_as_task(task), task, std::move(cb));
+}
+
+std::unique_ptr<Ec::RecoverTask> Ec::submit(std::unique_ptr<RecoverTask> task) {
+    auto *released = task.release();
+    if (not submit_impl(released->base_task())) {
+        return std::unique_ptr<Ec::RecoverTask>(released);
+    }
+    return {};
 }
 
 void Ec::create_cb(doca_ec_task_create *raw_create_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<CreateTask>((CreateTask *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
 
     auto *ec = (Ec *)ctx_data.ptr;
@@ -84,7 +108,7 @@ void Ec::create_cb(doca_ec_task_create *raw_create_task,
 void Ec::create_error_cb(doca_ec_task_create *raw_create_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<CreateTask>((CreateTask *)task_data.ptr);
 
     auto *ec = (Ec *)ctx_data.ptr;
     ec->m_create_error_cb(std::move(task));
@@ -93,7 +117,7 @@ void Ec::create_error_cb(doca_ec_task_create *raw_create_task,
 void Ec::update_cb(doca_ec_task_update *raw_update_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<UpdateTask>((UpdateTask *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
 
     auto *ec = (Ec *)ctx_data.ptr;
@@ -103,7 +127,7 @@ void Ec::update_cb(doca_ec_task_update *raw_update_task,
 void Ec::update_error_cb(doca_ec_task_update *raw_update_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<UpdateTask>((UpdateTask *)task_data.ptr);
 
     auto *ec = (Ec *)ctx_data.ptr;
     ec->m_update_error_cb(std::move(task));
@@ -112,7 +136,7 @@ void Ec::update_error_cb(doca_ec_task_update *raw_update_task,
 void Ec::recover_cb(doca_ec_task_recover *raw_recover_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<RecoverTask>((RecoverTask *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
 
     auto *ec = (Ec *)ctx_data.ptr;
@@ -122,7 +146,7 @@ void Ec::recover_cb(doca_ec_task_recover *raw_recover_task,
 void Ec::recover_error_cb(doca_ec_task_recover *raw_recover_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<RecoverTask>((RecoverTask *)task_data.ptr);
 
     auto *ec = (Ec *)ctx_data.ptr;
     ec->m_recover_error_cb(std::move(task));

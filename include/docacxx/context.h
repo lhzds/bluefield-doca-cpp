@@ -4,11 +4,9 @@
 #include <doca_error.h>
 #include <doca_pe.h>
 #include <functional>
-#include <memory>
-#include <optional>
 
 #include "doca_utils.h"
-#include "task.h"
+#include "noncopyable.h"
 
 namespace docacxx {
 class Context: public Noncopyable {
@@ -64,19 +62,6 @@ public:
         }
     }
 
-    // return 非空指针表示 retry
-    std::unique_ptr<Task> submit(std::unique_ptr<Task> task) {
-        // 获取 task 所有权并释放，直到 task 完成时的回调才重新获取所有权并释放任务
-        auto *raw_task = task.release()->raw();
-        doca_error result{doca_task_submit(raw_task)};
-        if (result == DOCA_ERROR_AGAIN) {
-            return task;
-        }
-
-        check_derr(result, "failed to summit task");
-        return {};
-    }
-
     bool is_cleaned() { return m_is_cleaned; }
     
     bool clean() {
@@ -100,6 +85,18 @@ public:
 
 protected:
     virtual void clean_impl() = 0;
+
+    // false 非空指针表示 retry
+    bool submit_impl(doca_task *raw_task) {
+        // 获取 task 所有权并释放，直到 task 完成时的回调才重新获取所有权并释放任务
+        doca_error result{doca_task_submit(raw_task)};
+        if (result == DOCA_ERROR_AGAIN) {
+            return false;
+        }
+
+        check_derr(result, "failed to summit task");
+        return true;
+    }
 
 private:
     State m_state{DOCA_CTX_STATE_IDLE};

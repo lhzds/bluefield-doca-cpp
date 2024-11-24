@@ -2,6 +2,7 @@
 
 #include "docacxx/context.h"
 #include "docacxx/mem.h"
+#include "docacxx/task.hpp"
 #include <doca_dma.h>
 #include <memory>
 #include <stdexcept>
@@ -9,6 +10,8 @@
 namespace docacxx {
 class Dma: public Context {
 public:
+    using MemcpyTask = Task<doca_dma_task_memcpy>;
+
     struct Cfg {
         size_t m_memcpy_task_slot_num{};
     };
@@ -29,13 +32,13 @@ public:
         return m_inner;
     }
 
-    std::unique_ptr<Task> alloc_memcpy_task(const Buffer &src, Buffer &dst,
-        Task::CompleteCallback cb);
-        
-    void set_memcpy_cb(ContextTaskCompleteCallback cb) {
+    std::unique_ptr<MemcpyTask> alloc_memcpy_task(const Buffer &src, Buffer &dst,
+        MemcpyTask::CompleteCallback cb);
+    std::unique_ptr<MemcpyTask> submit(std::unique_ptr<MemcpyTask> task);
+    void set_memcpy_cb(MemcpyTask::ContextCompleteCallback cb) {
         m_memcpy_cb = std::move(cb);
     }
-    void set_memcpy_error_cb(ContextTaskCompleteCallback cb) {
+    void set_memcpy_error_cb(MemcpyTask::ContextCompleteCallback cb) {
         m_memcpy_error_cb = std::move(cb);
     }
 
@@ -53,8 +56,8 @@ private:
     doca_dma *m_inner{};
     Cap m_cap{};
 
-    ContextTaskCompleteCallback m_memcpy_cb{[](std::unique_ptr<Task>) {}};
-    ContextTaskCompleteCallback m_memcpy_error_cb{[](std::unique_ptr<Task>) {
+    MemcpyTask::ContextCompleteCallback m_memcpy_cb{[](std::unique_ptr<MemcpyTask>) {}};
+    MemcpyTask::ContextCompleteCallback m_memcpy_error_cb{[](std::unique_ptr<MemcpyTask>) {
         throw std::runtime_error("memcpy error");
     }};
 };

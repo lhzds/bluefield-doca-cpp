@@ -10,11 +10,14 @@
 
 #include "../context.h"
 #include "../mem.h"
+#include "../task.hpp"
 
 namespace docacxx {
 namespace comch {
 class Consumer: public Context {
 public:
+    using PostRecvTask = Task<doca_comch_consumer_task_post_recv>;
+
     struct Cfg {
         size_t m_recv_task_slot_num{};
     };
@@ -38,24 +41,24 @@ public:
     }
 
     bool is_connected() const { return state() == DOCA_CTX_STATE_RUNNING; }
-    std::unique_ptr<Task> alloc_post_recv_task(Buffer &buf, Task::CompleteCallback cb);
-
-    void set_recv_cb(ContextTaskCompleteCallback cb) {
-        m_recv_cb = std::move(cb);
+    std::unique_ptr<PostRecvTask> alloc_post_recv_task(Buffer &buf, PostRecvTask::CompleteCallback cb);
+    std::unique_ptr<PostRecvTask> submit(std::unique_ptr<PostRecvTask> task);
+    void set_post_recv_cb(PostRecvTask::ContextCompleteCallback cb) {
+        m_post_recv_cb = std::move(cb);
     }
-    void set_recv_error_cb(ContextTaskCompleteCallback cb) {
-        m_recv_error_cb = std::move(cb);
+    void set_post_recv_error_cb(PostRecvTask::ContextCompleteCallback cb) {
+        m_post_recv_error_cb = std::move(cb);
     }
 
 protected:
     void clean_impl() override;
 
 private:
-    static void recv_cb(
+    static void post_recv_cb(
         doca_comch_consumer_task_post_recv *raw_post_recv_task,
         doca_data task_data,
         doca_data ctx_data);
-    static void recv_error_cb(
+    static void post_recv_error_cb(
         doca_comch_consumer_task_post_recv *raw_post_recv_task,
         doca_data task_data,
         doca_data ctx_data);
@@ -63,8 +66,8 @@ private:
     Cap m_cap{};
     doca_comch_consumer *m_inner{};
 
-    ContextTaskCompleteCallback m_recv_cb{[](std::unique_ptr<Task>) {}};
-    ContextTaskCompleteCallback m_recv_error_cb{[](std::unique_ptr<Task>) {
+    PostRecvTask::ContextCompleteCallback m_post_recv_cb{[](std::unique_ptr<PostRecvTask>) {}};
+    PostRecvTask::ContextCompleteCallback m_post_recv_error_cb{[](std::unique_ptr<PostRecvTask>) {
         throw std::runtime_error("consumer recv error");
     }};
 };

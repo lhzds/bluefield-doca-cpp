@@ -8,12 +8,13 @@
 
 #include "../context.h"
 #include "../mem.h"
-#include "docacxx/task.h"
+#include "docacxx/task.hpp"
 
 namespace docacxx {
 namespace comch {
 class Producer: public Context {
 public:
+    using SendTask = Task<doca_comch_producer_task_send>;
     struct Cfg {
         size_t m_send_task_slot_num{};
     };
@@ -36,13 +37,15 @@ public:
         return m_cap;
     }
     
-    std::unique_ptr<Task> alloc_send_task(const Buffer &buf, uint32_t consumer_id, Task::CompleteCallback cb);
-    std::unique_ptr<Task> alloc_send_task(uint8_t *imm_data, uint32_t imm_data_len, uint32_t consumer_id, Task::CompleteCallback cb);
-
-    void set_send_cb(ContextTaskCompleteCallback cb) {
-        m_send_cb = std::move(cb);
+    std::unique_ptr<SendTask> alloc_send_task(const Buffer &buf, uint32_t consumer_id,
+        SendTask::CompleteCallback cb);
+    std::unique_ptr<SendTask> alloc_send_task(uint8_t *imm_data, uint32_t imm_data_len,
+        uint32_t consumer_id, SendTask::CompleteCallback cb);
+    std::unique_ptr<SendTask> submit(std::unique_ptr<SendTask> task);
+    void set_send_cb(SendTask::ContextCompleteCallback cb) {
+        m_send_cb = std::move(cb); 
     }
-    void set_recv_error_cb(ContextTaskCompleteCallback cb) {
+    void set_recv_error_cb(SendTask::ContextCompleteCallback cb) {
         m_send_error_cb = std::move(cb);
     }
 
@@ -62,8 +65,8 @@ private:
     Cap m_cap{};
     doca_comch_producer *m_inner{};
 
-    ContextTaskCompleteCallback m_send_cb{[](std::unique_ptr<Task>) {}};
-    ContextTaskCompleteCallback m_send_error_cb{[](std::unique_ptr<Task>) {
+    SendTask::ContextCompleteCallback m_send_cb{[](std::unique_ptr<SendTask>) {}};
+    SendTask::ContextCompleteCallback m_send_error_cb{[](std::unique_ptr<SendTask>) {
         throw std::runtime_error("producer send error");
     }};
 };

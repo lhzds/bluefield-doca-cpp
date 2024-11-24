@@ -46,13 +46,20 @@ const doca_comch_connection *Client::get_connection() const {
     return const_cast<Client *>(this)->get_connection();
 }
 
-std::unique_ptr<Task> Client::alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len,
-    Task::CompleteCallback cb) {
+std::unique_ptr<Client::SendTask> Client::alloc_send_task(doca_comch_connection *peer,
+    const void *msg, uint32_t len, SendTask::CompleteCallback cb) {
     doca_comch_task_send *task{};
-
     check_derr(doca_comch_client_task_send_alloc_init(m_inner, peer, msg, len, &task),
         "failed to alloc comch send task");
-    return std::make_unique<Task>(doca_comch_task_send_as_task(task), std::move(cb));
+    return std::make_unique<SendTask>(doca_comch_task_send_as_task(task), task, std::move(cb));
+}
+
+std::unique_ptr<Client::SendTask> Client::submit(std::unique_ptr<Client::SendTask> task) {
+    auto *released = task.release();
+    if (not submit_impl(released->base_task())) {
+        return std::unique_ptr<Client::SendTask>(released);
+    }
+    return {};
 }
 
 Client *Client::from_conn_to_client(doca_comch_connection *comch_connection) {
@@ -69,7 +76,7 @@ void Client::send_cb(
     doca_comch_task_send *raw_send_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<SendTask>((SendTask *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
 
     auto *client = (Client *)ctx_data.ptr;
@@ -80,7 +87,7 @@ void Client::send_error_cb(
     doca_comch_task_send *raw_send_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<SendTask>((SendTask *)task_data.ptr);
 
     auto *client = (Client *)ctx_data.ptr;
     client->m_send_error_cb(std::move(task));

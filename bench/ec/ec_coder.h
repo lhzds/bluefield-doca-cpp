@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "docacxx/task_context.h"
+#include "docacxx/task_context.hpp"
 #include "docacxx/ctx/ec.h"
 #include "docacxx/mem.h"
 
@@ -75,6 +75,6 @@ private:
     std::unique_ptr<docacxx::Ec> m_inner;
 
     doca_ec_matrix *m_create_matrix{};
-    docacxx::TaskContext m_create_ctx;
-    docacxx::TaskContext m_recover_ctx;
+    docacxx::TaskContext<docacxx::Ec::CreateTask> m_create_ctx;
+    docacxx::TaskContext<docacxx::Ec::RecoverTask> m_recover_ctx;
 };

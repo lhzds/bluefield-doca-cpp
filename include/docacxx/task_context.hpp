@@ -3,9 +3,10 @@
 #include <functional>
 #include <memory>
 #include <queue>
-#include <docacxx/task.h>
+#include <docacxx/task.hpp>
 
 namespace docacxx {
+template<typename Task>
 class TaskContext {
 public:
     explicit TaskContext(size_t task_slot_num): m_task_slot_num(task_slot_num) {}
@@ -30,8 +31,8 @@ public:
         return m_processing_task_cnt;
     }
 
-    docacxx::ContextTaskCompleteCallback make_pipeline_submitter() {
-        return [&](std::unique_ptr<docacxx::Task> completed_task) {
+    Task::ContextCompleteCallback make_pipeline_submitter() {
+        return [&](std::unique_ptr<Task> completed_task) {
             completed_task.reset(); // 提前释放刚完成的 task
 
             if (not m_wait_queue.empty()) {

@@ -8,18 +8,18 @@
 #include "docacxx/ctx/consumer.h"
 #include "docacxx/ctx/producer.h"
 #include "docacxx/mem.h"
-#include "docacxx/task_context.h"
+#include "docacxx/task_context.hpp"
 
 class SyncConsumer {
 public:
     SyncConsumer(doca_comch_connection *peer_conn, doca_pe *conn_pe,
-        docacxx::Mmap &mmap, doca_dev *dev, size_t recv_task_slot_num): m_recv_ctx(recv_task_slot_num) {
+        docacxx::Mmap &mmap, doca_dev *dev, size_t recv_task_slot_num): m_post_recv_ctx(recv_task_slot_num) {
         docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
         docacxx::comch::Consumer::Cfg cfg;
         cfg.m_recv_task_slot_num = recv_task_slot_num;
         m_inner = std::make_unique<docacxx::comch::Consumer>(peer_conn, m_pe,
             conn_pe, mmap, dev, cfg);
-        m_inner->set_recv_cb(m_recv_ctx.make_pipeline_submitter());
+        m_inner->set_post_recv_cb(m_post_recv_ctx.make_pipeline_submitter());
         m_inner->start_sync();
     }
 
@@ -32,15 +32,15 @@ public:
     }
 
     void recv(const std::vector<std::unique_ptr<docacxx::Buffer>> &bufs) {
-        m_recv_ctx.reset();
+        m_post_recv_ctx.reset();
 
         for (size_t i{}; i < bufs.size(); ++i) {
-            m_recv_ctx.submit([&, i] {
+            m_post_recv_ctx.submit([&, i] {
                 auto task = m_inner->alloc_post_recv_task(*bufs[i], nullptr);
                 m_inner->submit(std::move(task));
             });
         }
-        while (m_recv_ctx.complete_cnt() != bufs.size()) {
+        while (m_post_recv_ctx.complete_cnt() != bufs.size()) {
             doca_pe_progress(m_pe);
         }
     }
@@ -48,7 +48,7 @@ public:
 protected:
     doca_pe *m_pe{};
     std::unique_ptr<docacxx::comch::Consumer> m_inner;
-    docacxx::TaskContext m_recv_ctx;
+    docacxx::TaskContext<docacxx::comch::Consumer::PostRecvTask> m_post_recv_ctx;
 };
 
 class SyncProducer {
@@ -93,7 +93,7 @@ public:
 protected:
     doca_pe *m_pe{};
     std::unique_ptr<docacxx::comch::Producer> m_inner;
-    docacxx::TaskContext m_send_ctx;
+    docacxx::TaskContext<docacxx::comch::Producer::SendTask> m_send_ctx;
     size_t m_consumer_id{};
 };
 

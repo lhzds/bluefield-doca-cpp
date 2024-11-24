@@ -10,12 +10,13 @@
 #include <functional>
 
 #include "../context.h"
-#include "docacxx/task.h"
+#include "docacxx/task.hpp"
 
 namespace docacxx {
 namespace comch {
 class Client: public Context {
 public:
+    using SendTask = Task<doca_comch_task_send>;
     using RecvCallback = std::function<void(doca_comch_connection *, uint8_t *, uint32_t)>;
     using ConsumerCallback = std::function<void(doca_comch_connection *, uint32_t)>;
 
@@ -39,15 +40,16 @@ public:
     const doca_comch_connection *get_connection() const;
     bool is_connected() const { return state() == DOCA_CTX_STATE_RUNNING; }
 
-    std::unique_ptr<Task> alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len,
-        Task::CompleteCallback cb);
-    
-    void set_send_cb(ContextTaskCompleteCallback cb) {
+    std::unique_ptr<SendTask> alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len,
+        SendTask::CompleteCallback cb);
+    std::unique_ptr<SendTask> submit(std::unique_ptr<SendTask> task);
+    void set_send_cb(SendTask::ContextCompleteCallback cb) {
         m_send_cb = std::move(cb);
     }
-    void set_send_error_cb(ContextTaskCompleteCallback cb) {
+    void set_send_error_cb(SendTask::ContextCompleteCallback cb) {
         m_send_error_cb = std::move(cb);
     }
+
     void set_recv_cb(RecvCallback cb) {
         m_recv_cb = std::move(cb);
     }
@@ -88,8 +90,8 @@ private:
 
     doca_comch_client *m_inner{};
 
-    ContextTaskCompleteCallback m_send_cb{[](std::unique_ptr<Task>) {}};
-    ContextTaskCompleteCallback m_send_error_cb{[](std::unique_ptr<Task>) {
+    SendTask::ContextCompleteCallback m_send_cb{[](std::unique_ptr<SendTask>) {}};
+    SendTask::ContextCompleteCallback m_send_error_cb{[](std::unique_ptr<SendTask>) {
         throw std::runtime_error("client send error");
     }};
     

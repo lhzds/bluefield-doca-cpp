@@ -27,7 +27,7 @@ Consumer::Consumer(
     // set task conf
     check_derr(
         doca_comch_consumer_task_post_recv_set_conf(
-            m_inner, recv_cb, recv_error_cb, cfg.m_recv_task_slot_num),
+            m_inner, post_recv_cb, post_recv_error_cb, cfg.m_recv_task_slot_num),
         "failed to set conf of consuner recv task");
 }
 
@@ -39,32 +39,41 @@ void Consumer::clean_impl() {
     }
 }
 
-std::unique_ptr<Task> Consumer::alloc_post_recv_task(Buffer &buf, Task::CompleteCallback cb) {
+std::unique_ptr<Consumer::PostRecvTask> Consumer::alloc_post_recv_task(Buffer &buf,
+    PostRecvTask::CompleteCallback cb) {
     doca_comch_consumer_task_post_recv *task{};
     check_derr(doca_comch_consumer_task_post_recv_alloc_init(
             m_inner, buf.raw(), &task), "failed to alloc post_recv_task");
-    return std::make_unique<Task>(doca_comch_consumer_task_post_recv_as_task(task), std::move(cb));
+    return std::make_unique<PostRecvTask>(doca_comch_consumer_task_post_recv_as_task(task), task, std::move(cb));
 }
 
-void Consumer::recv_cb(
+std::unique_ptr<Consumer::PostRecvTask> Consumer::submit(std::unique_ptr<Consumer::PostRecvTask> task) {
+    auto *released = task.release();
+    if (not submit_impl(released->base_task())) {
+        return std::unique_ptr<Consumer::PostRecvTask>(released);
+    }
+    return {};
+}
+
+void Consumer::post_recv_cb(
     doca_comch_consumer_task_post_recv *raw_post_recv_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<Consumer::PostRecvTask>((Consumer::PostRecvTask *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
 
     auto *consumer = (Consumer *)ctx_data.ptr;
-    consumer->m_recv_cb(std::move(task));
+    consumer->m_post_recv_cb(std::move(task));
 }
 
-void Consumer::recv_error_cb(
+void Consumer::post_recv_error_cb(
     doca_comch_consumer_task_post_recv *raw_post_recv_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
+    auto task = std::unique_ptr<Consumer::PostRecvTask>((Consumer::PostRecvTask *)task_data.ptr);
 
     auto *consumer = (Consumer *)ctx_data.ptr;
-    consumer->m_recv_error_cb(std::move(task));
+    consumer->m_post_recv_error_cb(std::move(task));
 }
 }        
 }
