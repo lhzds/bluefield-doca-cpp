@@ -38,12 +38,11 @@ void Lz4Compress::decompress_lz4_block_cb(
     doca_compress_task_decompress_lz4_block *raw_lz4_block_decompress_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *lz4_compress = (Lz4Compress *)ctx_data.ptr;
-    std::unique_ptr<Task> task;
-    task.reset((Task *)task_data.ptr);
-    task->callback(); // 任务成功就会调用回调
-    task.reset();
+    auto *task = (Task *)task_data.ptr;
+    task->call_cb(); // 任务成功就会调用回调
+    delete task; // 析构任务
 
+    auto *lz4_compress = (Lz4Compress *)ctx_data.ptr;
     lz4_compress->m_decompress_cb();
 }
 
@@ -51,11 +50,10 @@ void Lz4Compress::decompress_lz4_block_error_cb(
     doca_compress_task_decompress_lz4_block *raw_lz4_block_decompress_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *lz4_compress = (Lz4Compress *)ctx_data.ptr;
-    std::unique_ptr<Task> task;
-    task.reset((Task *)task_data.ptr);
-    task.reset();
+    auto *task = (Task *)task_data.ptr;
+    delete task; // 析构任务
 
+    auto *lz4_compress = (Lz4Compress *)ctx_data.ptr;
     lz4_compress->m_decompress_error_cb();
 }
 
@@ -78,10 +76,9 @@ void DeflateCompress::decompress_deflate_cb(
     doca_compress_task_decompress_deflate *raw_deflate_decompress_task,
     doca_data task_data,
     doca_data ctx_data) {
-    std::unique_ptr<Task> task;
-    task.reset((Task *)task_data.ptr);
-    task->callback(); // 任务成功就会调用回调
-    task.reset();
+    auto *task = (Task *)task_data.ptr;
+    task->call_cb(); // 任务成功就会调用回调
+    delete task; // 析构任务
 
     auto *deflate_compress = (DeflateCompress *)ctx_data.ptr;
     deflate_compress->m_decompress_cb();
@@ -91,9 +88,8 @@ void DeflateCompress::decompress_deflate_error_cb(
     doca_compress_task_decompress_deflate *raw_deflate_decompress_task,
     doca_data task_data,
     doca_data ctx_data) {
-    std::unique_ptr<Task> task;
-    task.reset((Task *)task_data.ptr);
-    task.reset();
+    auto *task = (Task *)task_data.ptr;
+    delete task; // 析构任务
 
     auto *deflate_compress = (DeflateCompress *)ctx_data.ptr;
     deflate_compress->m_decompress_error_cb();

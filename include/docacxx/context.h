@@ -64,8 +64,8 @@ public:
         }
     }
 
-    // return std::unique_ptr 表示 retry
-    std::optional<std::unique_ptr<Task>> submit(std::unique_ptr<Task> task) {
+    // return 非空指针表示 retry
+    std::unique_ptr<Task> submit(std::unique_ptr<Task> task) {
         // 获取 task 所有权并释放，直到 task 完成时的回调才重新获取所有权并释放任务
         auto *raw_task = task.release()->raw();
         doca_error result{doca_task_submit(raw_task)};

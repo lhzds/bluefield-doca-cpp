@@ -36,7 +36,7 @@ public:
 
         for (size_t i{}; i < bufs.size(); ++i) {
             m_recv_ctx.submit([&, i] {
-                auto task = m_inner->alloc_recv_task(*bufs[i], nullptr);
+                auto task = m_inner->alloc_post_recv_task(*bufs[i], nullptr);
                 m_inner->submit(std::move(task));
             });
         }
@@ -81,7 +81,7 @@ public:
                 auto ret = m_inner->submit(std::move(task));
                 while (ret) {
                     doca_pe_progress(m_pe);
-                    m_inner->submit(std::move(*ret));
+                    ret = m_inner->submit(std::move(ret));
                 }
             });
         }

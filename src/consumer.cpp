@@ -39,7 +39,7 @@ void Consumer::clean_impl() {
     }
 }
 
-std::unique_ptr<Task> Consumer::alloc_recv_task(Buffer &buf, Task::CompleteCallback cb) {
+std::unique_ptr<Task> Consumer::alloc_post_recv_task(Buffer &buf, Task::CompleteCallback cb) {
     doca_comch_consumer_task_post_recv *task{};
     check_derr(doca_comch_consumer_task_post_recv_alloc_init(
             m_inner, buf.raw(), &task), "failed to alloc post_recv_task");
@@ -50,10 +50,9 @@ void Consumer::recv_cb(
     doca_comch_consumer_task_post_recv *raw_post_recv_task,
     doca_data task_data,
     doca_data ctx_data) {
-    std::unique_ptr<Task> task;
-    task.reset((Task *)task_data.ptr);
-    task->callback();
-    task.reset();
+    auto *task = (Task *)task_data.ptr;
+    task->call_cb(); // 任务成功就会调用回调
+    delete task; // 析构任务
 
     auto *consumer = (Consumer *)ctx_data.ptr;
     consumer->m_recv_cb();
@@ -63,9 +62,8 @@ void Consumer::recv_error_cb(
     doca_comch_consumer_task_post_recv *raw_post_recv_task,
     doca_data task_data,
     doca_data ctx_data) {
-    std::unique_ptr<Task> task;
-    task.reset((Task *)task_data.ptr);
-    task.reset();
+    auto *task = (Task *)task_data.ptr;
+    delete task; // 析构任务
 
     auto *consumer = (Consumer *)ctx_data.ptr;
     consumer->m_recv_error_cb();

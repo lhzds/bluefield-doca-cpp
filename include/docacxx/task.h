@@ -8,7 +8,7 @@
 namespace docacxx {
 class Task: public Noncopyable {
 public:
-    using CompleteCallback = std::function<void()>;
+    using CompleteCallback = std::function<void(const doca_task *)>;
 
     Task(doca_task *inner, CompleteCallback cb): m_inner(inner), m_cb(std::move(cb)) {
         doca_data task_data;
@@ -25,8 +25,8 @@ public:
         return m_inner;
     }
 
-    const CompleteCallback &callback() {
-        return m_cb;
+    void call_cb() {
+        m_cb(m_inner);
     }
 
 private:

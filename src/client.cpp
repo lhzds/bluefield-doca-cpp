@@ -69,10 +69,9 @@ void Client::send_cb(
     doca_comch_task_send *raw_send_task,
     doca_data task_data,
     doca_data ctx_data) {
-    std::unique_ptr<Task> task;
-    task.reset((Task *)task_data.ptr);
-    task->callback(); // 任务成功就会调用回调
-    task.reset(); // 析构任务
+    auto *task = (Task *)task_data.ptr;
+    task->call_cb(); // 任务成功就会调用回调
+    delete task; // 析构任务
 
     auto *client = (Client *)ctx_data.ptr;
     client->m_send_cb();
@@ -82,9 +81,8 @@ void Client::send_error_cb(
     doca_comch_task_send *raw_send_task,
     doca_data task_data,
     doca_data ctx_data) {
-    std::unique_ptr<Task> task;
-    task.reset((Task *)task_data.ptr);
-    task.reset();
+    auto *task = (Task *)task_data.ptr;
+    delete task;
 
     auto *client = (Client *)ctx_data.ptr;
     client->m_send_error_cb();

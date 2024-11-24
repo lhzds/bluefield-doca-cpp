@@ -40,7 +40,7 @@ public:
     }
 
     bool is_connected() const { return state() == DOCA_CTX_STATE_RUNNING; }
-    std::unique_ptr<Task> alloc_recv_task(Buffer &buf, Task::CompleteCallback cb);
+    std::unique_ptr<Task> alloc_post_recv_task(Buffer &buf, Task::CompleteCallback cb);
 
     void set_recv_cb(RecvCallback cb) {
         m_recv_cb = std::move(cb);
