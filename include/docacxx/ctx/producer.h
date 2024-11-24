@@ -36,8 +36,8 @@ public:
         return m_cap;
     }
     
-    std::unique_ptr<Task> alloc_send_task(const Buffer &buf, uint8_t *imm_data,
-        uint32_t imm_data_len, uint32_t consumer_id, Task::CompleteCallback cb);
+    std::unique_ptr<Task> alloc_send_task(const Buffer &buf, uint32_t consumer_id, Task::CompleteCallback cb);
+    std::unique_ptr<Task> alloc_send_task(uint8_t *imm_data, uint32_t imm_data_len, uint32_t consumer_id, Task::CompleteCallback cb);
 
     void set_send_cb(ContextTaskCompleteCallback cb) {
         m_send_cb = std::move(cb);

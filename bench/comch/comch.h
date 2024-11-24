@@ -77,7 +77,7 @@ public:
 
         for (size_t i{}; i < bufs.size(); ++i) {
             m_send_ctx.submit([&, i] {
-                auto task = m_inner->alloc_send_task(*bufs[i], nullptr, 0, m_consumer_id, nullptr);
+                auto task = m_inner->alloc_send_task(*bufs[i], m_consumer_id, nullptr);
                 auto ret = m_inner->submit(std::move(task));
                 while (ret) {
                     doca_pe_progress(m_pe);

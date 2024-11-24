@@ -34,11 +34,17 @@ void Producer::clean_impl() {
     }
 }
 
-std::unique_ptr<Task> Producer::alloc_send_task(const Buffer &buf, uint8_t *imm_data,
-    uint32_t imm_data_len, uint32_t consumer_id, Task::CompleteCallback cb) {
+std::unique_ptr<Task> Producer::alloc_send_task(const Buffer &buf, uint32_t consumer_id, Task::CompleteCallback cb) {
     doca_comch_producer_task_send *task{};
     check_derr(doca_comch_producer_task_send_alloc_init(m_inner,
-        buf.raw(), imm_data, imm_data_len, consumer_id, &task), "failed to alloc send_task");
+        buf.raw(), nullptr, 0, consumer_id, &task), "failed to alloc send_task");
+    return std::make_unique<Task>(doca_comch_producer_task_send_as_task(task), std::move(cb));
+}
+
+std::unique_ptr<Task> Producer::alloc_send_task(uint8_t *imm_data, uint32_t imm_data_len, uint32_t consumer_id, Task::CompleteCallback cb) {
+    doca_comch_producer_task_send *task{};
+    check_derr(doca_comch_producer_task_send_alloc_init(m_inner,
+        nullptr, imm_data, imm_data_len, consumer_id, &task), "failed to alloc send_task");
     return std::make_unique<Task>(doca_comch_producer_task_send_as_task(task), std::move(cb));
 }
 
