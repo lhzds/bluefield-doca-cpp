@@ -1,8 +1,11 @@
 #pragma once
 
-#include <queue>
 #include <functional>
+#include <memory>
+#include <queue>
+#include <docacxx/task.h>
 
+namespace docacxx {
 class TaskContext {
 public:
     explicit TaskContext(size_t task_slot_num): m_task_slot_num(task_slot_num) {}
@@ -27,8 +30,10 @@ public:
         return m_processing_task_cnt;
     }
 
-    std::function<void()> make_pipeline_submitter() {
-        return [&] {
+    docacxx::ContextTaskCompleteCallback make_pipeline_submitter() {
+        return [&](std::unique_ptr<docacxx::Task> completed_task) {
+            completed_task.reset(); // 提前释放刚完成的 task
+
             if (not m_wait_queue.empty()) {
                 auto &submit_func = m_wait_queue.front();
                 submit_func();
@@ -41,6 +46,7 @@ public:
         
     };
 
+    // 当需要传递 简单的 Lambda 表达式 或 函数指针 时，使用模板版本，避免额外的动态分配和类型擦除
     template <typename SubmitFunc>
     void submit(SubmitFunc&& submit_func) {
         if (m_processing_task_cnt >= m_task_slot_num) {
@@ -73,3 +79,4 @@ private:
     const size_t m_task_slot_num{};
     std::queue<std::function<void()>> m_wait_queue;
 };
+}

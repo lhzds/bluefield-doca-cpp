@@ -74,63 +74,57 @@ std::unique_ptr<Task> Ec::alloc_recover_task(const doca_ec_matrix *matrix,
 void Ec::create_cb(doca_ec_task_create *raw_create_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
-    delete task; // 析构任务
 
     auto *ec = (Ec *)ctx_data.ptr;
-    ec->m_create_cb();
+    ec->m_create_cb(std::move(task));
 }
 
 void Ec::create_error_cb(doca_ec_task_create *raw_create_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
-    delete task; // 析构任务
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
 
     auto *ec = (Ec *)ctx_data.ptr;
-    ec->m_create_error_cb();
+    ec->m_create_error_cb(std::move(task));
 }
 
 void Ec::update_cb(doca_ec_task_update *raw_update_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
-    delete task; // 析构任务
 
     auto *ec = (Ec *)ctx_data.ptr;
-    ec->m_update_cb();
+    ec->m_update_cb(std::move(task));
 }
 
 void Ec::update_error_cb(doca_ec_task_update *raw_update_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
-    delete task; // 析构任务
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
 
     auto *ec = (Ec *)ctx_data.ptr;
-    ec->m_update_error_cb();
+    ec->m_update_error_cb(std::move(task));
 }
 
 void Ec::recover_cb(doca_ec_task_recover *raw_recover_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
-    delete task; // 析构任务
 
     auto *ec = (Ec *)ctx_data.ptr;
-    ec->m_recover_cb();
+    ec->m_recover_cb(std::move(task));
 }
 
 void Ec::recover_error_cb(doca_ec_task_recover *raw_recover_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
-    delete task; // 析构任务
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
 
     auto *ec = (Ec *)ctx_data.ptr;
-    ec->m_recover_error_cb();
+    ec->m_recover_error_cb(std::move(task));
 }
 }

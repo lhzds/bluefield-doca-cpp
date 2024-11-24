@@ -52,7 +52,7 @@ public:
 protected:
     doca_pe *m_pe{};
     std::unique_ptr<docacxx::Compress> m_decompressor;
-    TaskContext m_decompress_ctx;
+    docacxx::TaskContext m_decompress_ctx;
 };
 
 class Lz4Compressor: public Compressor {

@@ -20,9 +20,9 @@ Client::Client(std::string_view server_name, doca_dev *dev, doca_pe *pe, const C
     check_derr(doca_comch_client_event_msg_recv_register(m_inner, recv_cb),
         "failed to register recv msg event");
 
-    // check_derr(doca_comch_client_set_max_msg_size(client, 4080), "failed to
+    // check_derr(doca_comch_client_set_max_msg_size(m_inner, 4080), "failed to
     // set max msg size");
-    // check_derr(doca_comch_client_set_recv_queue_size(client, 1024),
+    // check_derr(doca_comch_client_set_recv_queue_size(m_inner, 1024),
     //     "failed to set max queue size");
 }
 
@@ -69,23 +69,21 @@ void Client::send_cb(
     doca_comch_task_send *raw_send_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
-    delete task; // 析构任务
 
     auto *client = (Client *)ctx_data.ptr;
-    client->m_send_cb();
+    client->m_send_cb(std::move(task));
 }
 
 void Client::send_error_cb(
     doca_comch_task_send *raw_send_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
-    delete task;
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
 
     auto *client = (Client *)ctx_data.ptr;
-    client->m_send_error_cb();
+    client->m_send_error_cb(std::move(task));
 }
 
 void Client::recv_cb(

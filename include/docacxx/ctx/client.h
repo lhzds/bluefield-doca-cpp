@@ -10,12 +10,12 @@
 #include <functional>
 
 #include "../context.h"
+#include "docacxx/task.h"
 
 namespace docacxx {
 namespace comch {
 class Client: public Context {
 public:
-    using SendCallback = std::function<void()>;
     using RecvCallback = std::function<void(doca_comch_connection *, uint8_t *, uint32_t)>;
     using ConsumerCallback = std::function<void(doca_comch_connection *, uint32_t)>;
 
@@ -42,16 +42,15 @@ public:
     std::unique_ptr<Task> alloc_send_task(doca_comch_connection *peer, const void *msg, uint32_t len,
         Task::CompleteCallback cb);
     
-    void set_send_cb(SendCallback cb) {
+    void set_send_cb(ContextTaskCompleteCallback cb) {
         m_send_cb = std::move(cb);
     }
-    void set_send_error_cb(SendCallback cb) {
+    void set_send_error_cb(ContextTaskCompleteCallback cb) {
         m_send_error_cb = std::move(cb);
     }
     void set_recv_cb(RecvCallback cb) {
         m_recv_cb = std::move(cb);
     }
-
     void set_new_consumer_cb(ConsumerCallback cb) {
         m_new_consumer_cb = std::move(cb);
     }
@@ -89,15 +88,15 @@ private:
 
     doca_comch_client *m_inner{};
 
-    SendCallback m_send_cb{[] {}};
-    SendCallback m_send_error_cb{[] {
-        throw std::runtime_error("client send error.");
+    ContextTaskCompleteCallback m_send_cb{[](std::unique_ptr<Task>) {}};
+    ContextTaskCompleteCallback m_send_error_cb{[](std::unique_ptr<Task>) {
+        throw std::runtime_error("client send error");
     }};
-    RecvCallback m_recv_cb{[](doca_comch_connection *, uint8_t *, uint32_t) {}};
     
+    RecvCallback m_recv_cb{[](doca_comch_connection *, uint8_t *, uint32_t) {}};
     ConsumerCallback m_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
     ConsumerCallback m_expired_consumer_cb{ [](doca_comch_connection *, uint32_t id) {
-        throw std::runtime_error(fmt::format("consumer with ID={} is expired.", id));
+        throw std::runtime_error(fmt::format("consumer with ID={} is expired", id));
     }};
 };
 }

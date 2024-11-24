@@ -15,8 +15,6 @@ namespace docacxx {
 namespace comch {
 class Consumer: public Context {
 public:
-    using RecvCallback = std::function<void()>;
-
     struct Cfg {
         size_t m_recv_task_slot_num{};
     };
@@ -42,10 +40,10 @@ public:
     bool is_connected() const { return state() == DOCA_CTX_STATE_RUNNING; }
     std::unique_ptr<Task> alloc_post_recv_task(Buffer &buf, Task::CompleteCallback cb);
 
-    void set_recv_cb(RecvCallback cb) {
+    void set_recv_cb(ContextTaskCompleteCallback cb) {
         m_recv_cb = std::move(cb);
     }
-    void set_recv_error_cb(RecvCallback cb) {
+    void set_recv_error_cb(ContextTaskCompleteCallback cb) {
         m_recv_error_cb = std::move(cb);
     }
 
@@ -65,8 +63,8 @@ private:
     Cap m_cap{};
     doca_comch_consumer *m_inner{};
 
-    RecvCallback m_recv_cb{[]() {}};
-    RecvCallback m_recv_error_cb{[]() {
+    ContextTaskCompleteCallback m_recv_cb{[](std::unique_ptr<Task>) {}};
+    ContextTaskCompleteCallback m_recv_error_cb{[](std::unique_ptr<Task>) {
         throw std::runtime_error("consumer recv error");
     }};
 };

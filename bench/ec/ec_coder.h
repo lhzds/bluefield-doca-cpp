@@ -75,6 +75,6 @@ private:
     std::unique_ptr<docacxx::Ec> m_inner;
 
     doca_ec_matrix *m_create_matrix{};
-    TaskContext m_create_ctx;
-    TaskContext m_recover_ctx;
+    docacxx::TaskContext m_create_ctx;
+    docacxx::TaskContext m_recover_ctx;
 };

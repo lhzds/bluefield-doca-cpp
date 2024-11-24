@@ -14,8 +14,6 @@ namespace docacxx {
 namespace comch {
 class Producer: public Context {
 public:
-    using SendCallback = std::function<void()>;
-
     struct Cfg {
         size_t m_send_task_slot_num{};
     };
@@ -41,10 +39,10 @@ public:
     std::unique_ptr<Task> alloc_send_task(const Buffer &buf, uint8_t *imm_data,
         uint32_t imm_data_len, uint32_t consumer_id, Task::CompleteCallback cb);
 
-    void set_send_cb(SendCallback cb) {
+    void set_send_cb(ContextTaskCompleteCallback cb) {
         m_send_cb = std::move(cb);
     }
-    void set_recv_error_cb(SendCallback cb) {
+    void set_recv_error_cb(ContextTaskCompleteCallback cb) {
         m_send_error_cb = std::move(cb);
     }
 
@@ -64,8 +62,8 @@ private:
     Cap m_cap{};
     doca_comch_producer *m_inner{};
 
-    SendCallback m_send_cb{[] {}};
-    SendCallback m_send_error_cb{[] {
+    ContextTaskCompleteCallback m_send_cb{[](std::unique_ptr<Task>) {}};
+    ContextTaskCompleteCallback m_send_error_cb{[](std::unique_ptr<Task>) {
         throw std::runtime_error("producer send error");
     }};
 };

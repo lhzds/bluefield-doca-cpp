@@ -10,8 +10,6 @@
 namespace docacxx {
 class Ec: public Context {
 public:
-    using CompleteCallback = std::function<void()>;
-
     struct Cfg {
         size_t m_create_task_slot_num{};
         size_t m_update_task_slot_num{};
@@ -41,22 +39,22 @@ public:
     std::unique_ptr<Task> alloc_recover_task(const doca_ec_matrix *matrix,
         const Buffer &src, Buffer &dst, Task::CompleteCallback cb);
 
-    void set_create_cb(CompleteCallback cb) {
+    void set_create_cb(ContextTaskCompleteCallback cb) {
         m_create_cb = std::move(cb);
     }
-    void set_create_error_cb(CompleteCallback cb) {
+    void set_create_error_cb(ContextTaskCompleteCallback cb) {
         m_create_error_cb = std::move(cb);
     }
-    void set_update_cb(CompleteCallback cb) {
+    void set_update_cb(ContextTaskCompleteCallback cb) {
         m_update_cb = std::move(cb);
     }
-    void set_update_error_cb(CompleteCallback cb) {
+    void set_update_error_cb(ContextTaskCompleteCallback cb) {
         m_update_error_cb = std::move(cb);
     }
-    void set_recover_cb(CompleteCallback cb) {
+    void set_recover_cb(ContextTaskCompleteCallback cb) {
         m_recover_cb = std::move(cb);
     }
-    void set_recover_error_cb(CompleteCallback cb) {
+    void set_recover_error_cb(ContextTaskCompleteCallback cb) {
         m_recover_error_cb = std::move(cb);
     }
 
@@ -85,17 +83,17 @@ private:
 
     doca_ec *m_inner{};
 
-    CompleteCallback m_create_cb{[] {}};
-    CompleteCallback m_create_error_cb{[] {
-        throw std::runtime_error("create error.");
+    ContextTaskCompleteCallback m_create_cb{[](std::unique_ptr<Task>) {}};
+    ContextTaskCompleteCallback m_create_error_cb{[](std::unique_ptr<Task>) {
+        throw std::runtime_error("create error");
     }};
-    CompleteCallback m_update_cb{[] {}};
-    CompleteCallback m_update_error_cb{[] {
-        throw std::runtime_error("update error.");
+    ContextTaskCompleteCallback m_update_cb{[](std::unique_ptr<Task>) {}};
+    ContextTaskCompleteCallback m_update_error_cb{[](std::unique_ptr<Task>) {
+        throw std::runtime_error("update error");
     }};
-    CompleteCallback m_recover_cb{[] {}};
-    CompleteCallback m_recover_error_cb{[] {
-        throw std::runtime_error("recover error.");
+    ContextTaskCompleteCallback m_recover_cb{[](std::unique_ptr<Task>) {}};
+    ContextTaskCompleteCallback m_recover_error_cb{[](std::unique_ptr<Task>) {
+        throw std::runtime_error("recover error");
     }};
 };
 }

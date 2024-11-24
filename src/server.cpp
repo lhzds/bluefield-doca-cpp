@@ -68,23 +68,21 @@ void Server::send_cb(
     doca_comch_task_send *raw_send_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
-    delete task; // 析构任务
 
     auto *server = (Server *)ctx_data.ptr;
-    server->m_send_cb();
+    server->m_send_cb(std::move(task));
 }
 
 void Server::send_error_cb(
     doca_comch_task_send *raw_send_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
-    delete task; // 析构任务
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
 
     auto *server = (Server *)ctx_data.ptr;
-    server->m_send_error_cb();
+    server->m_send_error_cb(std::move(task));
 }
 
 void Server::recv_cb(

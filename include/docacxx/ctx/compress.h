@@ -10,8 +10,6 @@
 namespace docacxx {
 class Compress: public Context {
 public:
-    using CompleteCallback = std::function<void()>;
-
     struct Cfg {
         size_t m_decompress_task_slot_num{};
     };
@@ -29,10 +27,10 @@ public:
     virtual std::unique_ptr<Task> alloc_decompress_task(const Buffer &src, Buffer &dst,
         Task::CompleteCallback cb) = 0;
         
-    void set_decompress_cb(CompleteCallback cb) {
+    void set_decompress_cb(ContextTaskCompleteCallback cb) {
         m_decompress_cb = std::move(cb);
     }
-    void set_decompress_error_cb(CompleteCallback cb) {
+    void set_decompress_error_cb(ContextTaskCompleteCallback cb) {
         m_decompress_error_cb = std::move(cb);
     }
 
@@ -40,9 +38,9 @@ protected:
     void clean_impl() override;
     
     doca_compress *m_inner{};
-    CompleteCallback m_decompress_cb{[]() {}};
-    CompleteCallback m_decompress_error_cb{[]() {
-        throw std::runtime_error("decompress error.");
+    ContextTaskCompleteCallback m_decompress_cb{[](std::unique_ptr<Task>) {}};
+    ContextTaskCompleteCallback m_decompress_error_cb{[](std::unique_ptr<Task>) {
+        throw std::runtime_error("decompress error");
     }};
 };
 

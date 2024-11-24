@@ -9,8 +9,6 @@
 namespace docacxx {
 class Dma: public Context {
 public:
-    using CompleteCallback = std::function<void()>;
-
     struct Cfg {
         size_t m_memcpy_task_slot_num{};
     };
@@ -34,10 +32,10 @@ public:
     std::unique_ptr<Task> alloc_memcpy_task(const Buffer &src, Buffer &dst,
         Task::CompleteCallback cb);
         
-    void set_memcpy_cb(CompleteCallback cb) {
+    void set_memcpy_cb(ContextTaskCompleteCallback cb) {
         m_memcpy_cb = std::move(cb);
     }
-    void set_memcpy_error_cb(CompleteCallback cb) {
+    void set_memcpy_error_cb(ContextTaskCompleteCallback cb) {
         m_memcpy_error_cb = std::move(cb);
     }
 
@@ -55,9 +53,9 @@ private:
     doca_dma *m_inner{};
     Cap m_cap{};
 
-    CompleteCallback m_memcpy_cb{[]() {}};
-    CompleteCallback m_memcpy_error_cb{[]() {
-        throw std::runtime_error("memcpy error.");
+    ContextTaskCompleteCallback m_memcpy_cb{[](std::unique_ptr<Task>) {}};
+    ContextTaskCompleteCallback m_memcpy_error_cb{[](std::unique_ptr<Task>) {
+        throw std::runtime_error("memcpy error");
     }};
 };
 }

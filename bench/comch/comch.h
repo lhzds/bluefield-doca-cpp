@@ -48,7 +48,7 @@ public:
 protected:
     doca_pe *m_pe{};
     std::unique_ptr<docacxx::comch::Consumer> m_inner;
-    TaskContext m_recv_ctx;
+    docacxx::TaskContext m_recv_ctx;
 };
 
 class SyncProducer {
@@ -93,7 +93,7 @@ public:
 protected:
     doca_pe *m_pe{};
     std::unique_ptr<docacxx::comch::Producer> m_inner;
-    TaskContext m_send_ctx;
+    docacxx::TaskContext m_send_ctx;
     size_t m_consumer_id{};
 };
 

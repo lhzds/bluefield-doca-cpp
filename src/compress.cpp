@@ -38,23 +38,21 @@ void Lz4Compress::decompress_lz4_block_cb(
     doca_compress_task_decompress_lz4_block *raw_lz4_block_decompress_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
-    delete task; // 析构任务
 
     auto *lz4_compress = (Lz4Compress *)ctx_data.ptr;
-    lz4_compress->m_decompress_cb();
+    lz4_compress->m_decompress_cb(std::move(task));
 }
 
 void Lz4Compress::decompress_lz4_block_error_cb(
     doca_compress_task_decompress_lz4_block *raw_lz4_block_decompress_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
-    delete task; // 析构任务
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
 
     auto *lz4_compress = (Lz4Compress *)ctx_data.ptr;
-    lz4_compress->m_decompress_error_cb();
+    lz4_compress->m_decompress_error_cb(std::move(task));
 }
 
 DeflateCompress::DeflateCompress(doca_pe *pe, doca_dev *dev, const Cfg &cfg)
@@ -76,22 +74,20 @@ void DeflateCompress::decompress_deflate_cb(
     doca_compress_task_decompress_deflate *raw_deflate_decompress_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
     task->call_cb(); // 任务成功就会调用回调
-    delete task; // 析构任务
 
     auto *deflate_compress = (DeflateCompress *)ctx_data.ptr;
-    deflate_compress->m_decompress_cb();
+    deflate_compress->m_decompress_cb(std::move(task));
 }
 
 void DeflateCompress::decompress_deflate_error_cb(
     doca_compress_task_decompress_deflate *raw_deflate_decompress_task,
     doca_data task_data,
     doca_data ctx_data) {
-    auto *task = (Task *)task_data.ptr;
-    delete task; // 析构任务
+    auto task = std::unique_ptr<Task>((Task *)task_data.ptr);
 
     auto *deflate_compress = (DeflateCompress *)ctx_data.ptr;
-    deflate_compress->m_decompress_error_cb();
+    deflate_compress->m_decompress_error_cb(std::move(task));
 }
 }
