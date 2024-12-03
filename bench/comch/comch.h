@@ -13,10 +13,10 @@
 class SyncConsumer {
 public:
     SyncConsumer(doca_comch_connection *peer_conn, doca_pe *conn_pe,
-        docacxx::Mmap &mmap, doca_dev *dev, size_t recv_task_slot_num): m_post_recv_ctx(recv_task_slot_num) {
+        docacxx::Mmap &mmap, doca_dev *dev, size_t post_recv_task_slot_num): m_post_recv_ctx(post_recv_task_slot_num) {
         docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
         docacxx::comch::Consumer::Cfg cfg;
-        cfg.m_recv_task_slot_num = recv_task_slot_num;
+        cfg.m_post_recv_task_slot_num = post_recv_task_slot_num;
         m_inner = std::make_unique<docacxx::comch::Consumer>(peer_conn, m_pe,
             conn_pe, mmap, dev, cfg);
         m_inner->set_post_recv_cb(m_post_recv_ctx.make_pipeline_submitter());

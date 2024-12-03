@@ -28,12 +28,12 @@ std::unique_ptr<Dma::MemcpyTask> Dma::alloc_memcpy_task(const Buffer &src, Buffe
     doca_dma_task_memcpy *task{};
     check_derr(doca_dma_task_memcpy_alloc_init(m_inner, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc dma memcpy task");
-    return std::make_unique<Dma::MemcpyTask>(doca_dma_task_memcpy_as_task(task), task, std::move(cb));
+    return std::make_unique<Dma::MemcpyTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Dma::MemcpyTask> Dma::submit(std::unique_ptr<Dma::MemcpyTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Dma::MemcpyTask>(released);
     }
     return {};

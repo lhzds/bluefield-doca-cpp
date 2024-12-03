@@ -39,7 +39,7 @@ Producer::alloc_send_task(const Buffer &buf, uint32_t consumer_id, SendTask::Com
     doca_comch_producer_task_send *task{};
     check_derr(doca_comch_producer_task_send_alloc_init(m_inner,
         buf.raw(), nullptr, 0, consumer_id, &task), "failed to alloc send_task");
-    return std::make_unique<SendTask>(doca_comch_producer_task_send_as_task(task), task, std::move(cb));
+    return std::make_unique<SendTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Producer::SendTask>
@@ -48,12 +48,12 @@ Producer::alloc_send_task(uint8_t *imm_data, uint32_t imm_data_len, uint32_t con
     doca_comch_producer_task_send *task{};
     check_derr(doca_comch_producer_task_send_alloc_init(m_inner,
         nullptr, imm_data, imm_data_len, consumer_id, &task), "failed to alloc send_task");
-    return std::make_unique<SendTask>(doca_comch_producer_task_send_as_task(task), task, std::move(cb));
+    return std::make_unique<SendTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Producer::SendTask> Producer::submit(std::unique_ptr<Producer::SendTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Producer::SendTask>(released);
     }
     return {};

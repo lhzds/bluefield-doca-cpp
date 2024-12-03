@@ -15,9 +15,9 @@ Consumer::Consumer(
     doca_dev *dev, const Cfg &cfg) {
     // get cap
     doca_devinfo *dev_info = doca_dev_as_devinfo(dev);
-    doca_comch_consumer_cap_get_max_num_tasks(dev_info, &m_cap.m_max_recv_task_slot_num);
+    doca_comch_consumer_cap_get_max_num_tasks(dev_info, &m_cap.m_max_post_recv_task_slot_num);
     doca_comch_consumer_cap_get_max_buf_size(dev_info, &m_cap.m_max_buf_size);
-    assert(cfg.m_recv_task_slot_num <= m_cap.m_max_recv_task_slot_num);
+    assert(cfg.m_post_recv_task_slot_num <= m_cap.m_max_post_recv_task_slot_num);
 
     // create context
     check_derr(doca_comch_consumer_create(peer_conn, mmap.raw(), &m_inner),
@@ -27,7 +27,7 @@ Consumer::Consumer(
     // set task conf
     check_derr(
         doca_comch_consumer_task_post_recv_set_conf(
-            m_inner, post_recv_cb, post_recv_error_cb, cfg.m_recv_task_slot_num),
+            m_inner, post_recv_cb, post_recv_error_cb, cfg.m_post_recv_task_slot_num),
         "failed to set conf of consuner recv task");
 }
 
@@ -44,12 +44,21 @@ std::unique_ptr<Consumer::PostRecvTask> Consumer::alloc_post_recv_task(Buffer &b
     doca_comch_consumer_task_post_recv *task{};
     check_derr(doca_comch_consumer_task_post_recv_alloc_init(
             m_inner, buf.raw(), &task), "failed to alloc post_recv_task");
-    return std::make_unique<PostRecvTask>(doca_comch_consumer_task_post_recv_as_task(task), task, std::move(cb));
+    return std::make_unique<PostRecvTask>(task, std::move(cb));
+}
+
+// 用于接收立即数
+std::unique_ptr<Consumer::PostRecvTask> Consumer::alloc_post_recv_task(
+    PostRecvTask::CompleteCallback cb) {
+    doca_comch_consumer_task_post_recv *task{};
+    check_derr(doca_comch_consumer_task_post_recv_alloc_init(
+            m_inner, nullptr, &task), "failed to alloc post_recv_task");
+    return std::make_unique<PostRecvTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Consumer::PostRecvTask> Consumer::submit(std::unique_ptr<Consumer::PostRecvTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Consumer::PostRecvTask>(released);
     }
     return {};

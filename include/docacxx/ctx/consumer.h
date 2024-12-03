@@ -19,10 +19,10 @@ public:
     using PostRecvTask = Task<doca_comch_consumer_task_post_recv>;
 
     struct Cfg {
-        size_t m_recv_task_slot_num{};
+        size_t m_post_recv_task_slot_num{};
     };
     struct Cap {
-        uint32_t m_max_recv_task_slot_num{};
+        uint32_t m_max_post_recv_task_slot_num{};
         uint32_t m_max_buf_size{};
     };
 
@@ -42,6 +42,7 @@ public:
 
     bool is_connected() const { return state() == DOCA_CTX_STATE_RUNNING; }
     std::unique_ptr<PostRecvTask> alloc_post_recv_task(Buffer &buf, PostRecvTask::CompleteCallback cb);
+    std::unique_ptr<PostRecvTask> alloc_post_recv_task(PostRecvTask::CompleteCallback cb);
     std::unique_ptr<PostRecvTask> submit(std::unique_ptr<PostRecvTask> task);
     void set_post_recv_cb(PostRecvTask::ContextCompleteCallback cb) {
         m_post_recv_cb = std::move(cb);

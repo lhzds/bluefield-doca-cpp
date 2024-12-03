@@ -32,14 +32,13 @@ Compress::alloc_lz4_block_decompress_task(const Buffer &src, Buffer &dst,
     doca_compress_task_decompress_lz4_block *task{};
     check_derr(doca_compress_task_decompress_lz4_block_alloc_init(m_inner, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc lz4 block decompress task");
-    return std::make_unique<Compress::Lz4BlockDecompressTask>(
-        doca_compress_task_decompress_lz4_block_as_task(task), task, std::move(cb));
+    return std::make_unique<Compress::Lz4BlockDecompressTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Compress::Lz4BlockDecompressTask>
 Compress::submit(std::unique_ptr<Compress::Lz4BlockDecompressTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Compress::Lz4BlockDecompressTask>(released);
     }
     return {};
@@ -73,14 +72,13 @@ Compress::alloc_deflate_decompress_task(const Buffer &src, Buffer &dst, DeflateD
     doca_compress_task_decompress_deflate *task{};
     check_derr(doca_compress_task_decompress_deflate_alloc_init(m_inner, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc deflate decompress task");
-    return std::make_unique<DeflateDecompressTask>(
-        doca_compress_task_decompress_deflate_as_task(task), task, std::move(cb));
+    return std::make_unique<DeflateDecompressTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Compress::DeflateDecompressTask>
 Compress::submit(std::unique_ptr<Compress::DeflateDecompressTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Compress::DeflateDecompressTask>(released);
     }
     return {};

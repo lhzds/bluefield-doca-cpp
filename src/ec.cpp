@@ -52,12 +52,12 @@ std::unique_ptr<Ec::CreateTask> Ec::alloc_create_task(const doca_ec_matrix *matr
     doca_ec_task_create *task{};
     check_derr(doca_ec_task_create_allocate_init(m_inner, matrix, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc ec create task");
-    return std::make_unique<Ec::CreateTask>(doca_ec_task_create_as_task(task), task, std::move(cb));
+    return std::make_unique<Ec::CreateTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Ec::CreateTask> Ec::submit(std::unique_ptr<CreateTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Ec::CreateTask>(released);
     }
     return {};
@@ -68,12 +68,12 @@ std::unique_ptr<Ec::UpdateTask> Ec::alloc_update_task(const doca_ec_matrix *matr
     doca_ec_task_update *task{};
     check_derr(doca_ec_task_update_allocate_init(m_inner, matrix, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc ec update task");
-    return std::make_unique<UpdateTask>(doca_ec_task_update_as_task(task), task, std::move(cb));
+    return std::make_unique<UpdateTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Ec::UpdateTask> Ec::submit(std::unique_ptr<UpdateTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Ec::UpdateTask>(released);
     }
     return {};
@@ -84,12 +84,12 @@ std::unique_ptr<Ec::RecoverTask> Ec::alloc_recover_task(const doca_ec_matrix *ma
     doca_ec_task_recover *task{};
     check_derr(doca_ec_task_recover_allocate_init(m_inner, matrix, src.raw(),
         dst.raw(), doca_data{}, &task), "failed to alloc ec recover task");
-    return std::make_unique<RecoverTask>(doca_ec_task_recover_as_task(task), task, std::move(cb));
+    return std::make_unique<RecoverTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Ec::RecoverTask> Ec::submit(std::unique_ptr<RecoverTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Ec::RecoverTask>(released);
     }
     return {};

@@ -51,12 +51,12 @@ std::unique_ptr<Client::SendTask> Client::alloc_send_task(doca_comch_connection 
     doca_comch_task_send *task{};
     check_derr(doca_comch_client_task_send_alloc_init(m_inner, peer, msg, len, &task),
         "failed to alloc comch send task");
-    return std::make_unique<SendTask>(doca_comch_task_send_as_task(task), task, std::move(cb));
+    return std::make_unique<SendTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Client::SendTask> Client::submit(std::unique_ptr<Client::SendTask> task) {
     auto *released = task.release();
-    if (not submit_impl(released->base_task())) {
+    if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Client::SendTask>(released);
     }
     return {};

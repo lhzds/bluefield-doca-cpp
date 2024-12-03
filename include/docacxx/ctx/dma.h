@@ -1,6 +1,7 @@
 #pragma once
 
 #include "docacxx/context.h"
+#include "docacxx/doca_utils.h"
 #include "docacxx/mem.h"
 #include "docacxx/task.hpp"
 #include <doca_dma.h>
@@ -57,8 +58,8 @@ private:
     Cap m_cap{};
 
     MemcpyTask::ContextCompleteCallback m_memcpy_cb{[](std::unique_ptr<MemcpyTask>) {}};
-    MemcpyTask::ContextCompleteCallback m_memcpy_error_cb{[](std::unique_ptr<MemcpyTask>) {
-        throw std::runtime_error("memcpy error");
+    MemcpyTask::ContextCompleteCallback m_memcpy_error_cb{[](std::unique_ptr<MemcpyTask> task) {
+        check_derr(task->status(), "memcpy error");
     }};
 };
 }
