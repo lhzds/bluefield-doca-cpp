@@ -100,7 +100,7 @@ public:
         return m_inner;
     }
 
-    doca_task *raw_base() {
+    doca_task *raw_base() const {
         return doca_comch_consumer_task_post_recv_as_task(m_inner);
     }
 

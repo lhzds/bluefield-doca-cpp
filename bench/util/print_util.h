@@ -5,7 +5,8 @@
 #include <chrono>
 #include <type_traits>
 
-#include "constant.h"
+constexpr size_t KB{1 << 10};
+constexpr size_t MB{1 << 20};
 
 inline static std::string size_str(size_t sz) {
     if (sz >= 1 * MB) {

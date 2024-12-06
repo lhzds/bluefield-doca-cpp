@@ -18,4 +18,4 @@ target("docacxx")
     add_files("src/*.cpp")
     add_packages("doca-common", "doca-comch", "doca-compress", "doca-ec", "doca-dma-lib", {public = true})
 
-includes("bench/xmake.lua")
+-- includes("bench/xmake.lua")
