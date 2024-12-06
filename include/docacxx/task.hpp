@@ -113,7 +113,9 @@ public:
     }
 
     void call_cb() {
-        m_cb(*this);
+        if (m_cb) {
+            m_cb(*this);
+        }
     }
 
 private:
