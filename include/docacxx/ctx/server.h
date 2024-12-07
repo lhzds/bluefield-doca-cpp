@@ -8,6 +8,7 @@
 #include <doca_types.h>
 #include <fmt/core.h>
 #include <functional>
+#include <iostream>
 #include <memory>
 
 #include "../context.h"
@@ -110,9 +111,7 @@ private:
 
     RecvCallback m_recv_cb{[](doca_comch_connection *, uint8_t *, uint32_t) {}};
     ConnectionCallback m_new_conn_cb{[](doca_comch_connection *) {}};
-    ConnectionCallback m_disconn_cb{[](doca_comch_connection *) {
-        throw std::runtime_error("peer is disconnected");
-    }};
+    ConnectionCallback m_disconn_cb{[](doca_comch_connection *) {}};
     ConsumerCallback m_new_consumer_cb{[](doca_comch_connection *, uint32_t) {}};
     ConsumerCallback m_expired_consumer_cb{ [](doca_comch_connection *, uint32_t id) {
         throw std::runtime_error(fmt::format("consumer with ID={} is expired", id));

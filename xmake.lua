@@ -1,8 +1,8 @@
 add_rules("mode.debug", "mode.release")
 set_languages("c++20")
 
-add_requires("fmt")
-add_packages("fmt", {private = true})
+add_requires("fmt 9.1.0")
+add_packages("fmt 9.1.0", {private = true})
 
 add_requires("doca-common", {system = true})
 add_requires("doca-comch", {system = true})
