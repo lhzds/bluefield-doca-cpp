@@ -1,5 +1,6 @@
 #pragma once
 
+#include "docacxx/mem.h"
 #include "noncopyable.h"
 #include "doca_utils.h"
 #include <doca_comch.h>
@@ -68,6 +69,10 @@ public:
         return doca_task_get_status(raw_base());
     }
 
+    void set_cb(CompleteCallback cb) {
+        m_cb = std::move(cb);
+    }
+
     void call_cb() {
         if (m_cb) {
             m_cb(*this);
@@ -86,7 +91,7 @@ public:
     // 使用 std::unique_ptr，离开作用域自动析构
     using ContextCompleteCallback = std::function<void(std::unique_ptr<Task>)>;
 
-    Task(doca_comch_consumer_task_post_recv *inner, CompleteCallback cb):
+    Task(doca_comch_consumer_task_post_recv *inner, Buffer *recv_buf, CompleteCallback cb):
         m_inner(inner), m_cb(std::move(cb)) {
         doca_data task_data;
         task_data.ptr = this;
@@ -106,12 +111,8 @@ public:
         return doca_comch_consumer_task_post_recv_as_task(m_inner);
     }
 
-    char *imm_data() const {
-        return (char *)doca_comch_consumer_task_post_recv_get_imm_data(raw());
-    }
-
-    size_t imm_data_size() const {
-        return doca_comch_consumer_task_post_recv_get_imm_data_len(raw());
+    void set_cb(CompleteCallback cb) {
+        m_cb = std::move(cb);
     }
 
     void call_cb() {
@@ -120,8 +121,21 @@ public:
         }
     }
 
+    char *imm_data() const {
+        return (char *)doca_comch_consumer_task_post_recv_get_imm_data(raw());
+    }
+
+    size_t imm_data_size() const {
+        return doca_comch_consumer_task_post_recv_get_imm_data_len(raw());
+    }
+
+    Buffer *buf() const {
+        return m_recv_buf;
+    }
+
 private:
     doca_comch_consumer_task_post_recv *m_inner{};
-    CompleteCallback m_cb{}; 
+    CompleteCallback m_cb{};
+    Buffer *m_recv_buf{};
 };
 }

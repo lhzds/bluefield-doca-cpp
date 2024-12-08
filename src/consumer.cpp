@@ -44,7 +44,7 @@ std::unique_ptr<Consumer::PostRecvTask> Consumer::alloc_post_recv_task(Buffer &b
     doca_comch_consumer_task_post_recv *task{};
     check_derr(doca_comch_consumer_task_post_recv_alloc_init(
             m_inner, buf.raw(), &task), "failed to alloc post_recv_task");
-    return std::make_unique<PostRecvTask>(task, std::move(cb));
+    return std::make_unique<PostRecvTask>(task, &buf, std::move(cb));
 }
 
 // 用于接收立即数
@@ -53,7 +53,7 @@ std::unique_ptr<Consumer::PostRecvTask> Consumer::alloc_post_recv_task(
     doca_comch_consumer_task_post_recv *task{};
     check_derr(doca_comch_consumer_task_post_recv_alloc_init(
             m_inner, nullptr, &task), "failed to alloc post_recv_task");
-    return std::make_unique<PostRecvTask>(task, std::move(cb));
+    return std::make_unique<PostRecvTask>(task, nullptr, std::move(cb));
 }
 
 std::unique_ptr<Consumer::PostRecvTask> Consumer::submit(std::unique_ptr<Consumer::PostRecvTask> task) {

@@ -21,17 +21,8 @@ public:
         return m_state;
     }
 
-    void init_ctx(doca_ctx *inner, doca_pe *pe, doca_pe *other_pe = nullptr) {
-        m_inner = inner;
-        doca_data ctx_data{};
-        ctx_data.ptr = this;
-        check_derr(doca_ctx_set_user_data(m_inner, ctx_data), "failed to set user data for ctx");
-        check_derr(doca_ctx_set_state_changed_cb(m_inner, state_changed_cb),
-            "failed to set state changed cb for ctx");
-        
-        m_pe = pe;
-        m_other_pe = other_pe;
-        check_derr(doca_pe_connect_ctx(m_pe, m_inner), "failed to connect pe with ctx");
+    doca_pe *pe() const {
+        return m_pe;
     }
 
     void start() {
@@ -78,17 +69,24 @@ public:
         clean_impl();
     }
 
-    void clean_sync(const std::vector<doca_pe *> &pes) {
-        stop_sync();
-        clean_impl();
+protected:
+    void init_ctx(doca_ctx *inner, doca_pe *pe, doca_pe *other_pe = nullptr) {
+        m_inner = inner;
+        doca_data ctx_data{};
+        ctx_data.ptr = this;
+        check_derr(doca_ctx_set_user_data(m_inner, ctx_data), "failed to set user data for ctx");
+        check_derr(doca_ctx_set_state_changed_cb(m_inner, state_changed_cb),
+            "failed to set state changed cb for ctx");
+        
+        m_pe = pe;
+        m_other_pe = other_pe;
+        check_derr(doca_pe_connect_ctx(m_pe, m_inner), "failed to connect pe with ctx");
     }
 
-protected:
     virtual void clean_impl() = 0;
 
     // false 非空指针表示 retry
     bool submit_impl(doca_task *raw_task) {
-        // 获取 task 所有权并释放，直到 task 完成时的回调才重新获取所有权并释放任务
         doca_error result{doca_task_submit(raw_task)};
         if (result == DOCA_ERROR_AGAIN) {
             return false;

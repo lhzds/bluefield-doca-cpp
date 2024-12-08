@@ -43,15 +43,16 @@ Producer::alloc_send_task(const Buffer &buf, uint32_t consumer_id, SendTask::Com
 }
 
 std::unique_ptr<Producer::SendTask>
-Producer::alloc_send_task(uint8_t *imm_data, uint32_t imm_data_len, uint32_t consumer_id,
+Producer::alloc_send_task(const Buffer &buf, uint8_t *imm_data, uint32_t imm_data_len, uint32_t consumer_id,
     SendTask::CompleteCallback cb) {
     doca_comch_producer_task_send *task{};
     check_derr(doca_comch_producer_task_send_alloc_init(m_inner,
-        nullptr, imm_data, imm_data_len, consumer_id, &task), "failed to alloc send_task");
+        buf.raw(), imm_data, imm_data_len, consumer_id, &task), "failed to alloc send_task");
     return std::make_unique<SendTask>(task, std::move(cb));
 }
 
 std::unique_ptr<Producer::SendTask> Producer::submit(std::unique_ptr<Producer::SendTask> task) {
+    // 获取 task 所有权并释放，直到 task 完成时的回调才重新获取所有权并释放任务
     auto *released = task.release();
     if (not submit_impl(released->raw_base())) {
         return std::unique_ptr<Producer::SendTask>(released);

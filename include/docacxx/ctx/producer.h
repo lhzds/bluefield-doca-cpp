@@ -39,13 +39,13 @@ public:
     
     std::unique_ptr<SendTask> alloc_send_task(const Buffer &buf, uint32_t consumer_id,
         SendTask::CompleteCallback cb);
-    std::unique_ptr<SendTask> alloc_send_task(uint8_t *imm_data, uint32_t imm_data_len,
+    std::unique_ptr<SendTask> alloc_send_task(const Buffer &buf, uint8_t *imm_data, uint32_t imm_data_len,
         uint32_t consumer_id, SendTask::CompleteCallback cb);
     std::unique_ptr<SendTask> submit(std::unique_ptr<SendTask> task);
     void set_send_cb(SendTask::ContextCompleteCallback cb) {
         m_send_cb = std::move(cb); 
     }
-    void set_recv_error_cb(SendTask::ContextCompleteCallback cb) {
+    void set_send_error_cb(SendTask::ContextCompleteCallback cb) {
         m_send_error_cb = std::move(cb);
     }
 

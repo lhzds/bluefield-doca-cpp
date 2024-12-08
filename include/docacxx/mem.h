@@ -88,6 +88,12 @@ class Buffer {
 public:
     Buffer(doca_buf *inner, char *addr, size_t size)
         :m_inner{inner}, m_addr{addr}, m_size{size} {}
+    Buffer(doca_buf *inner): m_inner{inner} {
+        void *addr{};
+        check_derr(doca_buf_get_head(m_inner, &addr), "failed to get doca buf head");
+        m_addr = (char *)addr;
+        check_derr(doca_buf_get_len(m_inner, &m_size), "failed to get doca buf len");
+    }
 
     ~Buffer() {
         if (not m_inner) {
@@ -151,7 +157,7 @@ public:
 private:
     doca_buf *m_inner{};
     char *m_addr{};
-    const size_t m_size{};
+    size_t m_size{};
 };
 
 class BufInventoryWithMmap {
