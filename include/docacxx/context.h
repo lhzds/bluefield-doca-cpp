@@ -66,7 +66,7 @@ public:
 
     void clean_sync() {
         stop_sync();
-        clean_impl();
+        clean();
     }
 
 protected:

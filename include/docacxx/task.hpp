@@ -92,7 +92,7 @@ public:
     using ContextCompleteCallback = std::function<void(std::unique_ptr<Task>)>;
 
     Task(doca_comch_consumer_task_post_recv *inner, Buffer *recv_buf, CompleteCallback cb):
-        m_inner(inner), m_cb(std::move(cb)) {
+        m_inner(inner), m_cb(std::move(cb)), m_recv_buf(recv_buf) {
         doca_data task_data;
         task_data.ptr = this;
         doca_task_set_user_data(raw_base(), task_data);

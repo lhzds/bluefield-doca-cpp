@@ -120,8 +120,7 @@ public:
         void *data{};
         size_t len{};
         check_derr(doca_buf_get_data(m_inner, &data), "failed to get data of buf");
-        check_derr(
-            doca_buf_get_data_len(m_inner, &len), "failed to get data len of buf");
+        check_derr(doca_buf_get_data_len(m_inner, &len), "failed to get data len of buf");
         return {(char *)data, len};
     }
 
@@ -129,8 +128,7 @@ public:
         void *data{};
         size_t len{};
         check_derr(doca_buf_get_data(m_inner, &data), "failed to get data of buf");
-        check_derr(
-            doca_buf_get_data_len(m_inner, &len), "failed to get data len of buf");
+        check_derr(doca_buf_get_data_len(m_inner, &len), "failed to get data len of buf");
         return {(const char *)data, len};
     }
 
