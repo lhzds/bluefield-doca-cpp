@@ -39,7 +39,7 @@ public:
         }
     }
 
-    void stop() {
+    virtual void stop() {
         auto result = doca_ctx_stop(m_inner);
         if (result != DOCA_SUCCESS || result != DOCA_ERROR_IN_PROGRESS) {
             check_derr(result, "Unable to stop server ctx");
