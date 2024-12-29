@@ -17,7 +17,7 @@ Server::Server(
     init_ctx(doca_comch_server_as_ctx(m_inner), pe);
 
     check_derr(
-        doca_comch_server_event_connection_register(
+        doca_comch_server_event_connection_status_changed_register(
             m_inner, new_conn_cb, disconn_cb),
         "failed to register connection event");
     check_derr(
