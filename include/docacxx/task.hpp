@@ -1,7 +1,7 @@
 #pragma once
 
 #include "docacxx/mem.h"
-#include "noncopyable.h"
+#include "docacxx/noncopyable.h"
 #include "doca_utils.h"
 #include <doca_comch.h>
 #include <doca_comch_consumer.h>
@@ -17,7 +17,6 @@
 #include <type_traits>
 
 namespace docacxx {
-
 template<typename RawDocaTask>
 class Task: public Noncopyable {
 public:

@@ -16,8 +16,8 @@ public:
     using DeflateDecompressTask = Task<doca_compress_task_decompress_deflate>;
 
     struct Cfg {
-        size_t m_lz4_block_decompress_task_slot_num{};
-        size_t m_deflate_decompress_task_slot_num{};
+        size_t lz4_block_decompress_task_slot_num{};
+        size_t deflate_decompress_task_slot_num{};
     };
 
     Compress(doca_pe *pe, doca_dev *dev, const Cfg &cfg);

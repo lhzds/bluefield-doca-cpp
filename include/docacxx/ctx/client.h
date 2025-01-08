@@ -9,7 +9,7 @@
 #include <fmt/core.h>
 #include <functional>
 
-#include "../context.h"
+#include "docacxx/context.h"
 #include "docacxx/task.hpp"
 
 namespace docacxx {
@@ -21,7 +21,7 @@ public:
     using ConsumerCallback = std::function<void(doca_comch_connection *, uint32_t)>;
 
     struct Cfg {
-        size_t m_max_send_task_slot_num{1};
+        size_t max_send_task_slot_num{1};
         // size_t max_msg_size{};
         // size_t max_recv_queue_size{};
     };

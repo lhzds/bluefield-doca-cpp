@@ -17,9 +17,9 @@ public:
     using RecoverTask = Task<doca_ec_task_recover>;
 
     struct Cfg {
-        size_t m_create_task_slot_num{};
-        size_t m_update_task_slot_num{};
-        size_t m_recover_task_slot_num{};
+        size_t create_task_slot_num{};
+        size_t update_task_slot_num{};
+        size_t recover_task_slot_num{};
     };
 
     Ec(doca_pe *pe, doca_dev *dev, const Cfg &cfg);

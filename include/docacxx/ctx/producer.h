@@ -6,8 +6,8 @@
 #include <doca_mmap.h>
 #include <functional>
 
-#include "../context.h"
-#include "../mem.h"
+#include "docacxx/context.h"
+#include "docacxx/mem.h"
 #include "docacxx/task.hpp"
 
 namespace docacxx {
@@ -16,11 +16,11 @@ class Producer: public Context {
 public:
     using SendTask = Task<doca_comch_producer_task_send>;
     struct Cfg {
-        size_t m_send_task_slot_num{};
+        size_t send_task_slot_num{};
     };
     struct Cap {
-        uint32_t m_max_send_task_slot_num{};
-        uint32_t m_max_buf_size{};
+        uint32_t max_send_task_slot_num{};
+        uint32_t max_buf_size{};
     };
 
     Producer(doca_comch_connection *peer_conn, doca_pe *pe,

@@ -10,13 +10,13 @@ Ec::Ec(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
     init_ctx(doca_ec_as_ctx(m_inner), pe);
     check_derr(doca_ec_task_create_set_conf(m_inner,
         create_cb, create_error_cb,
-        cfg.m_create_task_slot_num), "failed to set ec create task conf");
+        cfg.create_task_slot_num), "failed to set ec create task conf");
     check_derr(doca_ec_task_update_set_conf(m_inner,
         update_cb, update_error_cb,
-        cfg.m_update_task_slot_num), "failed to set ec update task conf");
+        cfg.update_task_slot_num), "failed to set ec update task conf");
     check_derr(doca_ec_task_recover_set_conf(m_inner,
         recover_cb, recover_error_cb,
-        cfg.m_recover_task_slot_num), "failed to set ec recover task conf");
+        cfg.recover_task_slot_num), "failed to set ec recover task conf");
 }
 
 void Ec::clean_impl() {

@@ -6,13 +6,13 @@ namespace docacxx {
 Dma::Dma(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
     // get cap
     doca_devinfo *dev_info = doca_dev_as_devinfo(dev);
-    doca_dma_cap_task_memcpy_get_max_buf_size(dev_info, &m_cap.m_max_buf_size);
+    doca_dma_cap_task_memcpy_get_max_buf_size(dev_info, &m_cap.max_buf_size);
 
     check_derr(doca_dma_create(dev, &m_inner),
         "failed to create dma context");
     init_ctx(doca_dma_as_ctx(m_inner), pe);
     check_derr(doca_dma_task_memcpy_set_conf(m_inner, memcpy_cb, memcpy_error_cb,
-        cfg.m_memcpy_task_slot_num), "failed to set dma memcpy task conf");
+        cfg.memcpy_task_slot_num), "failed to set dma memcpy task conf");
 }
 
 void Dma::clean_impl() {

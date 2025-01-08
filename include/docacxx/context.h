@@ -5,8 +5,8 @@
 #include <doca_pe.h>
 #include <functional>
 
-#include "doca_utils.h"
-#include "noncopyable.h"
+#include "docacxx/doca_utils.h"
+#include "docacxx/noncopyable.h"
 
 namespace docacxx {
 class Context: public Noncopyable {

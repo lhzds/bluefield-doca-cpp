@@ -15,8 +15,8 @@ Consumer::Consumer(
     doca_dev *dev, const Cfg &cfg) {
     // get cap
     doca_devinfo *dev_info = doca_dev_as_devinfo(dev);
-    doca_comch_consumer_cap_get_max_num_tasks(dev_info, &m_cap.m_max_post_recv_task_slot_num);
-    doca_comch_consumer_cap_get_max_buf_size(dev_info, &m_cap.m_max_buf_size);
+    doca_comch_consumer_cap_get_max_num_tasks(dev_info, &m_cap.max_post_recv_task_slot_num);
+    doca_comch_consumer_cap_get_max_buf_size(dev_info, &m_cap.max_buf_size);
     assert(cfg.m_post_recv_task_slot_num <= m_cap.m_max_post_recv_task_slot_num);
 
     // create context
@@ -27,7 +27,7 @@ Consumer::Consumer(
     // set task conf
     check_derr(
         doca_comch_consumer_task_post_recv_set_conf(
-            m_inner, post_recv_cb, post_recv_error_cb, cfg.m_post_recv_task_slot_num),
+            m_inner, post_recv_cb, post_recv_error_cb, cfg.post_recv_task_slot_num),
         "failed to set conf of consuner recv task");
 }
 

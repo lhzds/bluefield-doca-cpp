@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <queue>
 #include <docacxx/task.hpp>

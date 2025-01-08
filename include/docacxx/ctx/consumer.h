@@ -8,9 +8,9 @@
 #include <functional>
 #include <memory>
 
-#include "../context.h"
-#include "../mem.h"
-#include "../task.hpp"
+#include "docacxx/context.h"
+#include "docacxx/mem.h"
+#include "docacxx/task.hpp"
 
 namespace docacxx {
 namespace comch {
@@ -19,11 +19,11 @@ public:
     using PostRecvTask = Task<doca_comch_consumer_task_post_recv>;
 
     struct Cfg {
-        size_t m_post_recv_task_slot_num{};
+        size_t post_recv_task_slot_num{};
     };
     struct Cap {
-        uint32_t m_max_post_recv_task_slot_num{};
-        uint32_t m_max_buf_size{};
+        uint32_t max_post_recv_task_slot_num{};
+        uint32_t max_buf_size{};
     };
 
     Consumer(doca_comch_connection *peer_conn, doca_pe *pe,

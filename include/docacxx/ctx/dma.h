@@ -1,12 +1,13 @@
 #pragma once
 
+#include <doca_dma.h>
+#include <memory>
+#include <stdexcept>
+
 #include "docacxx/context.h"
 #include "docacxx/doca_utils.h"
 #include "docacxx/mem.h"
 #include "docacxx/task.hpp"
-#include <doca_dma.h>
-#include <memory>
-#include <stdexcept>
 
 namespace docacxx {
 class Dma: public Context {
@@ -14,10 +15,10 @@ public:
     using MemcpyTask = Task<doca_dma_task_memcpy>;
 
     struct Cfg {
-        size_t m_memcpy_task_slot_num{};
+        size_t memcpy_task_slot_num{};
     };
     struct Cap {
-        size_t m_max_buf_size;
+        size_t max_buf_size;
     };
 
     Dma(doca_pe *pe, doca_dev *dev, const Cfg &cfg);

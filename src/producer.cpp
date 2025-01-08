@@ -13,8 +13,8 @@ Producer::Producer(
     doca_comch_connection *peer_conn, doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
     // get cap
     doca_devinfo *dev_info = doca_dev_as_devinfo(dev);
-    doca_comch_producer_cap_get_max_num_tasks(dev_info, &m_cap.m_max_send_task_slot_num);
-    doca_comch_producer_cap_get_max_buf_size(dev_info, &m_cap.m_max_buf_size);
+    doca_comch_producer_cap_get_max_num_tasks(dev_info, &m_cap.max_send_task_slot_num);
+    doca_comch_producer_cap_get_max_buf_size(dev_info, &m_cap.max_buf_size);
     assert(cfg.m_send_task_slot_num <= m_cap.m_max_send_task_slot_num);
 
     // create context
@@ -22,7 +22,7 @@ Producer::Producer(
         "failed to create comch producer");
     init_ctx(doca_comch_producer_as_ctx(m_inner), pe);
     check_derr(doca_comch_producer_task_send_set_conf(
-        m_inner, send_cb, send_error_cb, cfg.m_send_task_slot_num),
+        m_inner, send_cb, send_error_cb, cfg.send_task_slot_num),
         "failed to set conf of producer send task");
 }
 

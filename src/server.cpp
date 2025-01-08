@@ -25,7 +25,7 @@ Server::Server(
             m_inner, new_consumer_cb, expired_consumer_cb),
         "failed to register consumer event");
 
-    check_derr(doca_comch_server_task_send_set_conf(m_inner, send_cb, send_error_cb, cfg.m_max_send_task_slot_num),
+    check_derr(doca_comch_server_task_send_set_conf(m_inner, send_cb, send_error_cb, cfg.max_send_task_slot_num),
         "failed to set send task conf");
     check_derr(doca_comch_server_event_msg_recv_register(m_inner, recv_cb),
         "failed to register recv msg event");

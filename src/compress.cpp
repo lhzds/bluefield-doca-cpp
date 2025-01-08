@@ -12,10 +12,10 @@ Compress::Compress(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
 
     check_derr(doca_compress_task_decompress_lz4_block_set_conf(m_inner,
         decompress_lz4_block_cb, decompress_lz4_block_error_cb,
-        cfg.m_lz4_block_decompress_task_slot_num), "failed to set lz4 block decompress task conf");
+        cfg.lz4_block_decompress_task_slot_num), "failed to set lz4 block decompress task conf");
     check_derr(doca_compress_task_decompress_deflate_set_conf(m_inner,
         decompress_deflate_cb, decompress_deflate_error_cb,
-        cfg.m_deflate_decompress_task_slot_num), "failed to set deflate decompression task conf");
+        cfg.deflate_decompress_task_slot_num), "failed to set deflate decompression task conf");
 }
 
 void Compress::clean_impl() {

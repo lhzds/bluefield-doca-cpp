@@ -7,7 +7,8 @@
 #include <doca_mmap.h>
 #include <doca_buf.h>
 #include <string_view>
-#include "doca_utils.h"
+
+#include "docacxx/doca_utils.h"
 
 namespace docacxx {
 class Mmap {
