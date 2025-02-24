@@ -9,10 +9,10 @@ Dma::Dma(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
     doca_dma_cap_task_memcpy_get_max_buf_size(dev_info, &m_cap.max_buf_size);
 
     check_derr(doca_dma_create(dev, &m_inner),
-        "failed to create dma context");
+        "Failed to create dma context");
     init_ctx(doca_dma_as_ctx(m_inner), pe);
     check_derr(doca_dma_task_memcpy_set_conf(m_inner, memcpy_cb, memcpy_error_cb,
-        cfg.memcpy_task_slot_num), "failed to set dma memcpy task conf");
+        cfg.memcpy_task_slot_num), "Failed to set dma memcpy task conf");
 }
 
 void Dma::clean_impl() {
@@ -27,7 +27,7 @@ std::unique_ptr<Dma::MemcpyTask> Dma::alloc_memcpy_task(const Buffer &src, Buffe
     MemcpyTask::CompleteCallback cb) {
     doca_dma_task_memcpy *task{};
     check_derr(doca_dma_task_memcpy_alloc_init(m_inner, src.raw(),
-        dst.raw(), doca_data{}, &task), "failed to alloc dma memcpy task");
+        dst.raw(), doca_data{}, &task), "Failed to alloc dma memcpy task");
     return std::make_unique<Dma::MemcpyTask>(task, std::move(cb));
 }
 

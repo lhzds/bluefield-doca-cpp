@@ -19,7 +19,7 @@ public:
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
-            std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
+            std::cerr << "Failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 
@@ -37,7 +37,7 @@ class Lz4Compressor: public Compressor {
 public:
     Lz4Compressor(doca_dev *dev, size_t decompress_task_slot_num)
         :m_decompress_ctx(decompress_task_slot_num) {
-        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
 
         docacxx::Compress::Cfg cfg;
         cfg.m_lz4_block_decompress_task_slot_num = decompress_task_slot_num;
@@ -79,7 +79,7 @@ class DeflateCompressor: public Compressor {
 public:
     DeflateCompressor(doca_dev *dev, size_t decompress_task_slot_num)
         :m_decompress_ctx(decompress_task_slot_num) {
-        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
 
         docacxx::Compress::Cfg cfg;
         cfg.m_deflate_decompress_task_slot_num = decompress_task_slot_num;

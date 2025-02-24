@@ -19,11 +19,11 @@ Producer::Producer(
 
     // create context
     check_derr(doca_comch_producer_create(peer_conn, &m_inner),
-        "failed to create comch producer");
+        "Failed to create comch producer");
     init_ctx(doca_comch_producer_as_ctx(m_inner), pe);
     check_derr(doca_comch_producer_task_send_set_conf(
         m_inner, send_cb, send_error_cb, cfg.send_task_slot_num),
-        "failed to set conf of producer send task");
+        "Failed to set conf of producer send task");
 }
 
 void Producer::clean_impl() {
@@ -38,7 +38,7 @@ std::unique_ptr<Producer::SendTask>
 Producer::alloc_send_task(const Buffer &buf, uint32_t consumer_id, SendTask::CompleteCallback cb) {
     doca_comch_producer_task_send *task{};
     check_derr(doca_comch_producer_task_send_alloc_init(m_inner,
-        buf.raw(), nullptr, 0, consumer_id, &task), "failed to alloc send_task");
+        buf.raw(), nullptr, 0, consumer_id, &task), "Failed to alloc send_task");
     return std::make_unique<SendTask>(task, std::move(cb));
 }
 
@@ -47,7 +47,7 @@ Producer::alloc_send_task(const Buffer &buf, uint8_t *imm_data, uint32_t imm_dat
     SendTask::CompleteCallback cb) {
     doca_comch_producer_task_send *task{};
     check_derr(doca_comch_producer_task_send_alloc_init(m_inner,
-        buf.raw(), imm_data, imm_data_len, consumer_id, &task), "failed to alloc send_task");
+        buf.raw(), imm_data, imm_data_len, consumer_id, &task), "Failed to alloc send_task");
     return std::make_unique<SendTask>(task, std::move(cb));
 }
 

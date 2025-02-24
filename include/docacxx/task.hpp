@@ -60,7 +60,7 @@ public:
         } else if constexpr (std::is_same_v<RawDocaTask, doca_comch_task_send>) {
             return doca_comch_task_send_as_task(m_inner);
         } else {
-            throw_with("wrong type");
+            throw_with("Unsupported doca_task type");
         }
     }
 

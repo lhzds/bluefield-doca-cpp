@@ -11,7 +11,7 @@ public:
         size_t data_block_count, size_t rdnc_block_count,
         size_t create_task_slot_num, size_t recover_task_slot_num)
         : m_create_ctx(create_task_slot_num), m_recover_ctx(recover_task_slot_num) {
-        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
         docacxx::Ec::Cfg cfg;
         cfg.m_create_task_slot_num = create_task_slot_num;
         cfg.m_recover_task_slot_num = recover_task_slot_num;
@@ -30,7 +30,7 @@ public:
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
-            std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
+            std::cerr << "Failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 

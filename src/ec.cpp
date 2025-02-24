@@ -6,17 +6,17 @@
 namespace docacxx {
 Ec::Ec(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
     check_derr(doca_ec_create(dev, &m_inner),
-        "failed to create ec context");
+        "Failed to create ec context");
     init_ctx(doca_ec_as_ctx(m_inner), pe);
     check_derr(doca_ec_task_create_set_conf(m_inner,
         create_cb, create_error_cb,
-        cfg.create_task_slot_num), "failed to set ec create task conf");
+        cfg.create_task_slot_num), "Failed to set ec create task conf");
     check_derr(doca_ec_task_update_set_conf(m_inner,
         update_cb, update_error_cb,
-        cfg.update_task_slot_num), "failed to set ec update task conf");
+        cfg.update_task_slot_num), "Failed to set ec update task conf");
     check_derr(doca_ec_task_recover_set_conf(m_inner,
         recover_cb, recover_error_cb,
-        cfg.recover_task_slot_num), "failed to set ec recover task conf");
+        cfg.recover_task_slot_num), "Failed to set ec recover task conf");
 }
 
 void Ec::clean_impl() {
@@ -31,7 +31,7 @@ doca_ec_matrix *Ec::create_matrix(doca_ec_matrix_type type,
     size_t data_block_count, size_t rdnc_block_count) {
     doca_ec_matrix *matrix{};
     check_derr(doca_ec_matrix_create(m_inner, type, data_block_count, rdnc_block_count, &matrix),
-        "failed to create matrix");
+        "Failed to create matrix");
     return matrix;
 }
 
@@ -44,14 +44,14 @@ doca_ec_matrix *Ec::create_recover_matrix(const struct doca_ec_matrix *coding_ma
 }
 
 void Ec::destroy_matrix(doca_ec_matrix *matrix) {
-    check_derr(doca_ec_matrix_destroy(matrix), "failed to destroy matrix");
+    check_derr(doca_ec_matrix_destroy(matrix), "Failed to destroy matrix");
 }
 
 std::unique_ptr<Ec::CreateTask> Ec::alloc_create_task(const doca_ec_matrix *matrix,
         const Buffer &src, Buffer &dst, CreateTask::CompleteCallback cb) {
     doca_ec_task_create *task{};
     check_derr(doca_ec_task_create_allocate_init(m_inner, matrix, src.raw(),
-        dst.raw(), doca_data{}, &task), "failed to alloc ec create task");
+        dst.raw(), doca_data{}, &task), "Failed to alloc ec create task");
     return std::make_unique<Ec::CreateTask>(task, std::move(cb));
 }
 
@@ -67,7 +67,7 @@ std::unique_ptr<Ec::UpdateTask> Ec::alloc_update_task(const doca_ec_matrix *matr
         const Buffer &src, Buffer &dst, UpdateTask::CompleteCallback cb) {
     doca_ec_task_update *task{};
     check_derr(doca_ec_task_update_allocate_init(m_inner, matrix, src.raw(),
-        dst.raw(), doca_data{}, &task), "failed to alloc ec update task");
+        dst.raw(), doca_data{}, &task), "Failed to alloc ec update task");
     return std::make_unique<UpdateTask>(task, std::move(cb));
 }
 
@@ -83,7 +83,7 @@ std::unique_ptr<Ec::RecoverTask> Ec::alloc_recover_task(const doca_ec_matrix *ma
         const Buffer &src, Buffer &dst, RecoverTask::CompleteCallback cb) {
     doca_ec_task_recover *task{};
     check_derr(doca_ec_task_recover_allocate_init(m_inner, matrix, src.raw(),
-        dst.raw(), doca_data{}, &task), "failed to alloc ec recover task");
+        dst.raw(), doca_data{}, &task), "Failed to alloc ec recover task");
     return std::make_unique<RecoverTask>(task, std::move(cb));
 }
 

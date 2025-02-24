@@ -80,12 +80,12 @@ int main(int argc, char **argv) {
     doca_dev *dev{};
     doca_dev_rep *dev_rep{};
     docacxx::check_derr(docacxx::open_doca_device_with_pci(dev_pci_addr.data(), &dev),
-        "failed to open dev");
+        "Failed to open dev");
     docacxx::check_derr(docacxx::open_doca_device_rep_with_pci(dev, DOCA_DEVINFO_REP_FILTER_NET,
-        rep_pci_addr.data(), &dev_rep), "failed to open dev");
+        rep_pci_addr.data(), &dev_rep), "Failed to open dev");
     ScopeGuard guard([&] {
-        docacxx::check_derr(doca_dev_rep_close(dev_rep), "failed to close dev rep");
-        docacxx::check_derr(doca_dev_close(dev), "failed to close dev");
+        docacxx::check_derr(doca_dev_rep_close(dev_rep), "Failed to close dev rep");
+        docacxx::check_derr(doca_dev_close(dev), "Failed to close dev");
     });
 
     // create doca buf inv

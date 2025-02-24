@@ -60,7 +60,7 @@ private:
 
     MemcpyTask::ContextCompleteCallback m_memcpy_cb{[](std::unique_ptr<MemcpyTask>) {}};
     MemcpyTask::ContextCompleteCallback m_memcpy_error_cb{[](std::unique_ptr<MemcpyTask> task) {
-        check_derr(task->status(), "memcpy error");
+        check_derr(task->status(), "Memcpy error");
     }};
 };
 }

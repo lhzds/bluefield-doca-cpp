@@ -13,28 +13,28 @@ Server::Server(
     doca_pe *pe, const Cfg &cfg) {
     check_derr(
         doca_comch_server_create(dev, dev_rep, name.data(), &m_inner),
-        "failed to create server");
+        "Failed to create server");
     init_ctx(doca_comch_server_as_ctx(m_inner), pe);
 
     check_derr(
         doca_comch_server_event_connection_status_changed_register(
             m_inner, new_conn_cb, disconn_cb),
-        "failed to register connection event");
+        "Failed to register connection event");
     check_derr(
         doca_comch_server_event_consumer_register(
             m_inner, new_consumer_cb, expired_consumer_cb),
-        "failed to register consumer event");
+        "Failed to register consumer event");
 
     check_derr(doca_comch_server_task_send_set_conf(m_inner, send_cb, send_error_cb, cfg.max_send_task_slot_num),
-        "failed to set send task conf");
+        "Failed to set send task conf");
     check_derr(doca_comch_server_event_msg_recv_register(m_inner, recv_cb),
-        "failed to register recv msg event");
+        "Failed to register recv msg event");
 
     // check_derr(doca_comch_server_set_max_msg_size(inner, cfg.max_msg_size),
-    // "failed to set max msg size");
+    // "Failed to set max msg size");
     // check_derr(doca_comch_server_set_recv_queue_size(inner,
     // cfg.max_recv_queue_size),
-    //     "failed to set max queue size");
+    //     "Failed to set max queue size");
 }
 
 void Server::clean_impl() {
@@ -49,7 +49,7 @@ std::unique_ptr<Server::SendTask> Server::alloc_send_task(doca_comch_connection 
     const void *msg, uint32_t len, SendTask::CompleteCallback cb) {
     doca_comch_task_send *task{};
     check_derr(doca_comch_server_task_send_alloc_init(m_inner, peer, msg, len, &task),
-        "failed to alloc comch send task");
+        "Failed to alloc comch send task");
     return std::make_unique<SendTask>(task, std::move(cb));
 }
 
@@ -67,7 +67,7 @@ Server *Server::from_conn_to_server(doca_comch_connection *comch_connection) {
     check_derr(
         doca_ctx_get_user_data(
             doca_comch_server_as_ctx(raw_server), &ctx_data),
-        "failed to get user data of ctx");
+        "Failed to get user data of ctx");
     return (Server *)ctx_data.ptr;
 }
 

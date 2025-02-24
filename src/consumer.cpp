@@ -21,14 +21,14 @@ Consumer::Consumer(
 
     // create context
     check_derr(doca_comch_consumer_create(peer_conn, mmap.raw(), &m_inner),
-        "failed to create comch consumer");
+        "Failed to create comch consumer");
     init_ctx(doca_comch_consumer_as_ctx(m_inner), pe, conn_pe);
     
     // set task conf
     check_derr(
         doca_comch_consumer_task_post_recv_set_conf(
             m_inner, post_recv_cb, post_recv_error_cb, cfg.post_recv_task_slot_num),
-        "failed to set conf of consuner recv task");
+        "Failed to set conf of consuner recv task");
 }
 
 void Consumer::clean_impl() {
@@ -43,7 +43,7 @@ std::unique_ptr<Consumer::PostRecvTask> Consumer::alloc_post_recv_task(Buffer &b
     PostRecvTask::CompleteCallback cb) {
     doca_comch_consumer_task_post_recv *task{};
     check_derr(doca_comch_consumer_task_post_recv_alloc_init(
-            m_inner, buf.raw(), &task), "failed to alloc post_recv_task");
+            m_inner, buf.raw(), &task), "Failed to alloc post_recv_task");
     return std::make_unique<PostRecvTask>(task, &buf, std::move(cb));
 }
 
@@ -52,7 +52,7 @@ std::unique_ptr<Consumer::PostRecvTask> Consumer::alloc_post_recv_task(
     PostRecvTask::CompleteCallback cb) {
     doca_comch_consumer_task_post_recv *task{};
     check_derr(doca_comch_consumer_task_post_recv_alloc_init(
-            m_inner, nullptr, &task), "failed to alloc post_recv_task");
+            m_inner, nullptr, &task), "Failed to alloc post_recv_task");
     return std::make_unique<PostRecvTask>(task, nullptr, std::move(cb));
 }
 

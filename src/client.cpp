@@ -8,22 +8,22 @@ namespace docacxx {
 namespace comch {
 Client::Client(std::string_view server_name, doca_dev *dev, doca_pe *pe, const Cfg &cfg) {
     check_derr(doca_comch_client_create(dev, server_name.data(), &m_inner),
-        "failed to create client");    
+        "Failed to create client");    
     init_ctx(doca_comch_client_as_ctx(m_inner), pe);
 
     check_derr(doca_comch_client_event_consumer_register(
             m_inner, new_consumer_cb, expired_consumer_cb),
-        "failed to register consumer event");
+        "Failed to register consumer event");
 
     check_derr(doca_comch_client_task_send_set_conf(m_inner, send_cb, send_error_cb, cfg.max_send_task_slot_num),
-        "failed to set send task conf");
+        "Failed to set send task conf");
     check_derr(doca_comch_client_event_msg_recv_register(m_inner, recv_cb),
-        "failed to register recv msg event");
+        "Failed to register recv msg event");
 
-    // check_derr(doca_comch_client_set_max_msg_size(m_inner, 4080), "failed to
+    // check_derr(doca_comch_client_set_max_msg_size(m_inner, 4080), "Failed to
     // set max msg size");
     // check_derr(doca_comch_client_set_recv_queue_size(m_inner, 1024),
-    //     "failed to set max queue size");
+    //     "Failed to set max queue size");
 }
 
 void Client::clean_impl() {
@@ -38,7 +38,7 @@ doca_comch_connection *Client::get_connection() {
     doca_comch_connection *conn{};
     check_derr(
         doca_comch_client_get_connection(m_inner, &conn),
-        "failed to get connection from client");
+        "Failed to get connection from client");
     return conn;
 }
 
@@ -50,7 +50,7 @@ std::unique_ptr<Client::SendTask> Client::alloc_send_task(doca_comch_connection 
     const void *msg, uint32_t len, SendTask::CompleteCallback cb) {
     doca_comch_task_send *task{};
     check_derr(doca_comch_client_task_send_alloc_init(m_inner, peer, msg, len, &task),
-        "failed to alloc comch send task");
+        "Failed to alloc comch send task");
     return std::make_unique<SendTask>(task, std::move(cb));
 }
 
@@ -68,7 +68,7 @@ Client *Client::from_conn_to_client(doca_comch_connection *comch_connection) {
     check_derr(
         doca_ctx_get_user_data(
             doca_comch_client_as_ctx(raw_client), &ctx_data),
-        "failed to get user data of ctx");
+        "Failed to get user data of ctx");
     return (Client *)ctx_data.ptr;
 }
 

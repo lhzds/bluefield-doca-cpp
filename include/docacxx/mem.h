@@ -16,13 +16,13 @@ public:
     Mmap(doca_dev *dev, char *addr, size_t size,
         uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE)
         : m_addr(addr), m_size(size) {
-        check_derr(doca_mmap_create(&m_inner), "failed to create mmap");
-        check_derr(doca_mmap_add_dev(m_inner, dev), "failed to add dev to mmap");
+        check_derr(doca_mmap_create(&m_inner), "Failed to create mmap");
+        check_derr(doca_mmap_add_dev(m_inner, dev), "Failed to add dev to mmap");
         check_derr(doca_mmap_set_permissions(m_inner, access_mask),
-            "failed to set permissions of mmap");
+            "Failed to set permissions of mmap");
         check_derr(doca_mmap_set_memrange(m_inner, m_addr, m_size),
-            "failed to set memrange of mmap");
-        check_derr(doca_mmap_start(m_inner), "failed to start mmap");
+            "Failed to set memrange of mmap");
+        check_derr(doca_mmap_start(m_inner), "Failed to start mmap");
     }
 
     Mmap(doca_dev *dev, size_t size,
@@ -54,7 +54,7 @@ public:
         const void *export_desc{};
         size_t len{};
         check_derr(doca_mmap_export_pci(m_inner, dev, &export_desc, &len)
-            , "failed to export mmap by pci");
+            , "Failed to export mmap by pci");
         return {(const char *)export_desc, len};
     }
 
@@ -91,9 +91,9 @@ public:
         :m_inner{inner}, m_addr{addr}, m_size{size} {}
     Buffer(doca_buf *inner): m_inner{inner} {
         void *addr{};
-        check_derr(doca_buf_get_head(m_inner, &addr), "failed to get doca buf head");
+        check_derr(doca_buf_get_head(m_inner, &addr), "Failed to get doca buf head");
         m_addr = (char *)addr;
-        check_derr(doca_buf_get_len(m_inner, &m_size), "failed to get doca buf len");
+        check_derr(doca_buf_get_len(m_inner, &m_size), "Failed to get doca buf len");
     }
 
     ~Buffer() {
@@ -109,27 +109,27 @@ public:
 
     void set_doca_buf_data(size_t size) {
         check_derr(doca_buf_set_data(m_inner, m_addr, size),
-            "failed to set data of buf");
+            "Failed to set data of buf");
     }
 
     void clear_doca_buf_data() {
         check_derr(doca_buf_set_data(m_inner, m_addr, 0),
-            "failed to clear data of buf");
+            "Failed to clear data of buf");
     }
 
     std::pair<char *, size_t> get_doca_buf_data() {
         void *data{};
         size_t len{};
-        check_derr(doca_buf_get_data(m_inner, &data), "failed to get data of buf");
-        check_derr(doca_buf_get_data_len(m_inner, &len), "failed to get data len of buf");
+        check_derr(doca_buf_get_data(m_inner, &data), "Failed to get data of buf");
+        check_derr(doca_buf_get_data_len(m_inner, &len), "Failed to get data len of buf");
         return {(char *)data, len};
     }
 
     std::string_view get_doca_buf_data() const {
         void *data{};
         size_t len{};
-        check_derr(doca_buf_get_data(m_inner, &data), "failed to get data of buf");
-        check_derr(doca_buf_get_data_len(m_inner, &len), "failed to get data len of buf");
+        check_derr(doca_buf_get_data(m_inner, &data), "Failed to get data of buf");
+        check_derr(doca_buf_get_data_len(m_inner, &len), "Failed to get data len of buf");
         return {(const char *)data, len};
     }
 
@@ -164,20 +164,20 @@ public:
     BufInventoryWithMmap(doca_dev *dev, char *addr, size_t size, size_t max_bufs,
         uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE) {
         check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
-            "failed to create buf inv");
+            "Failed to create buf inv");
         m_mmap = std::make_unique<Mmap>(dev, addr, size, access_mask);
     }
 
     BufInventoryWithMmap(doca_dev *dev, size_t size, size_t max_bufs,
         uint32_t access_mask = DOCA_ACCESS_FLAG_PCI_READ_WRITE) {
         check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
-            "failed to create buf inv");
+            "Failed to create buf inv");
         m_mmap = std::make_unique<Mmap>(dev, size, access_mask);
     }
 
     BufInventoryWithMmap(std::string_view export_desc, doca_dev *dev, char *remote_addr, size_t size, size_t max_bufs) {
         check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
-            "failed to create buf inv");
+            "Failed to create buf inv");
         m_mmap = std::make_unique<Mmap>(export_desc, dev, remote_addr, size);
     }
 
@@ -194,14 +194,14 @@ public:
     std::unique_ptr<Buffer> get_buf(size_t offset, size_t size) {
         doca_buf *buf{};
         check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, m_mmap->raw(), data() + offset, size, &buf),
-            "failed to get doca buf");
+            "Failed to get doca buf");
         return std::make_unique<Buffer>(buf, data() + offset, size);
     }
 
     std::unique_ptr<Buffer> get_buf(char *addr, size_t size) {
         doca_buf *buf{};
         check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, m_mmap->raw(), addr, size, &buf),
-            "failed to get doca buf");
+            "Failed to get doca buf");
         return std::make_unique<Buffer>(buf, addr, size);
     }
 
@@ -242,7 +242,7 @@ class BufInventory {
 public:    
    BufInventory(doca_dev *dev, size_t max_bufs) {
         check_derr(doca_buf_inventory_create(max_bufs, &m_inner),
-            "failed to create buf inv");
+            "Failed to create buf inv");
     }
 
     ~BufInventory() {
@@ -256,14 +256,14 @@ public:
     std::unique_ptr<Buffer> get_buf(Mmap &mmap, size_t offset, size_t size) {
         doca_buf *buf{};
         check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, mmap.raw(), mmap.data() + offset, size, &buf),
-            "failed to get doca buf");
+            "Failed to get doca buf");
         return std::make_unique<Buffer>(buf, mmap.data() + offset, size);
     }
 
     std::unique_ptr<Buffer> get_buf(Mmap &mmap, char *addr, size_t size) {
         doca_buf *buf{};
         check_derr(doca_buf_inventory_buf_get_by_addr(m_inner, mmap.raw(), addr, size, &buf),
-            "failed to get doca buf");
+            "Failed to get doca buf");
         return std::make_unique<Buffer>(buf, addr, size);
     }
 

@@ -14,7 +14,7 @@ class SyncConsumer {
 public:
     SyncConsumer(doca_comch_connection *peer_conn, doca_pe *conn_pe,
         docacxx::Mmap &mmap, doca_dev *dev, size_t post_recv_task_slot_num): m_post_recv_ctx(post_recv_task_slot_num) {
-        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
         docacxx::comch::Consumer::Cfg cfg;
         cfg.m_post_recv_task_slot_num = post_recv_task_slot_num;
         m_inner = std::make_unique<docacxx::comch::Consumer>(peer_conn, m_pe,
@@ -27,7 +27,7 @@ public:
         m_inner->clean_sync();
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
-            std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
+            std::cerr << "Failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 
@@ -56,7 +56,7 @@ public:
     SyncProducer(doca_comch_connection *peer_conn, doca_dev *dev,
         size_t send_task_slot_num, size_t consumer_id)
         :m_send_ctx(send_task_slot_num), m_consumer_id{consumer_id} {
-        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
         docacxx::comch::Producer::Cfg cfg;
         cfg.m_send_task_slot_num = send_task_slot_num;
         m_inner = std::make_unique<docacxx::comch::Producer>(peer_conn, m_pe, dev, cfg);
@@ -68,7 +68,7 @@ public:
         m_inner->clean_sync();
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
-            std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
+            std::cerr << "Failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 
@@ -101,7 +101,7 @@ class DpuEnd {
 public:
     DpuEnd(std::string_view name, doca_dev *dev, doca_dev_rep *dev_rep,
         docacxx::Mmap &mmap, size_t send_task_slot_num, size_t recv_task_slot_num) {
-        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
 
         m_inner = std::make_unique<docacxx::comch::Server>(name.data(), dev, dev_rep, m_pe, docacxx::comch::Server::Cfg{});
         m_inner->set_new_conn_cb([&](doca_comch_connection *conn) {
@@ -127,7 +127,7 @@ public:
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
-            std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
+            std::cerr << "Failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 
@@ -152,7 +152,7 @@ class HostEnd {
 public:
     HostEnd(std::string_view server_name, doca_dev *dev,
         docacxx::Mmap &mmap, size_t send_task_slot_num, size_t recv_task_slot_num) {
-        docacxx::check_derr(doca_pe_create(&m_pe), "failed to create pe");
+        docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
 
         m_inner = std::make_unique<docacxx::comch::Client>(server_name.data(), dev, m_pe, docacxx::comch::Client::Cfg{});
         m_inner->set_new_consumer_cb([&](doca_comch_connection *conn, uint32_t id) {
@@ -177,7 +177,7 @@ public:
 
         auto result = doca_pe_destroy(m_pe);
         if (result != DOCA_SUCCESS) {
-            std::cerr << "failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
+            std::cerr << "Failed to destroy pe: " << doca_error_get_descr(result) << std::endl;
         }
     }
 

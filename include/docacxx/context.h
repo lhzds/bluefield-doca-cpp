@@ -74,13 +74,13 @@ protected:
         m_inner = inner;
         doca_data ctx_data{};
         ctx_data.ptr = this;
-        check_derr(doca_ctx_set_user_data(m_inner, ctx_data), "failed to set user data for ctx");
+        check_derr(doca_ctx_set_user_data(m_inner, ctx_data), "Failed to set user data for ctx");
         check_derr(doca_ctx_set_state_changed_cb(m_inner, state_changed_cb),
-            "failed to set state changed cb for ctx");
+            "Failed to set state changed cb for ctx");
         
         m_pe = pe;
         m_other_pe = other_pe;
-        check_derr(doca_pe_connect_ctx(m_pe, m_inner), "failed to connect pe with ctx");
+        check_derr(doca_pe_connect_ctx(m_pe, m_inner), "Failed to connect pe with ctx");
     }
 
     virtual void clean_impl() = 0;
@@ -92,7 +92,7 @@ protected:
             return false;
         }
 
-        check_derr(result, "failed to summit task");
+        check_derr(result, "Failed to summit task");
         return true;
     }
 

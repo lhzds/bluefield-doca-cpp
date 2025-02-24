@@ -7,15 +7,15 @@
 namespace docacxx {
 Compress::Compress(doca_pe *pe, doca_dev *dev, const Cfg &cfg) {
     check_derr(doca_compress_create(dev, &m_inner),
-        "failed to create compress context");
+        "Failed to create compress context");
     init_ctx(doca_compress_as_ctx(m_inner), pe);
 
     check_derr(doca_compress_task_decompress_lz4_block_set_conf(m_inner,
         decompress_lz4_block_cb, decompress_lz4_block_error_cb,
-        cfg.lz4_block_decompress_task_slot_num), "failed to set lz4 block decompress task conf");
+        cfg.lz4_block_decompress_task_slot_num), "Failed to set lz4 block decompress task conf");
     check_derr(doca_compress_task_decompress_deflate_set_conf(m_inner,
         decompress_deflate_cb, decompress_deflate_error_cb,
-        cfg.deflate_decompress_task_slot_num), "failed to set deflate decompression task conf");
+        cfg.deflate_decompress_task_slot_num), "Failed to set deflate decompression task conf");
 }
 
 void Compress::clean_impl() {
@@ -31,7 +31,7 @@ Compress::alloc_lz4_block_decompress_task(const Buffer &src, Buffer &dst,
     Lz4BlockDecompressTask::CompleteCallback cb) {
     doca_compress_task_decompress_lz4_block *task{};
     check_derr(doca_compress_task_decompress_lz4_block_alloc_init(m_inner, src.raw(),
-        dst.raw(), doca_data{}, &task), "failed to alloc lz4 block decompress task");
+        dst.raw(), doca_data{}, &task), "Failed to alloc lz4 block decompress task");
     return std::make_unique<Compress::Lz4BlockDecompressTask>(task, std::move(cb));
 }
 
@@ -71,7 +71,7 @@ std::unique_ptr<Compress::DeflateDecompressTask>
 Compress::alloc_deflate_decompress_task(const Buffer &src, Buffer &dst, DeflateDecompressTask::CompleteCallback cb) {
     doca_compress_task_decompress_deflate *task{};
     check_derr(doca_compress_task_decompress_deflate_alloc_init(m_inner, src.raw(),
-        dst.raw(), doca_data{}, &task), "failed to alloc deflate decompress task");
+        dst.raw(), doca_data{}, &task), "Failed to alloc deflate decompress task");
     return std::make_unique<DeflateDecompressTask>(task, std::move(cb));
 }
 

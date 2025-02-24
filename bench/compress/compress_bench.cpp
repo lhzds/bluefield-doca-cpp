@@ -121,9 +121,9 @@ int main(int argc, char **argv) {
     // open device
     doca_dev *dev{};
     docacxx::check_derr(docacxx::open_doca_device_with_pci(dev_pci_addr.data(), &dev),
-            "failed to open dev");
+            "Failed to open dev");
     ScopeGuard guard([&] {
-        docacxx::check_derr(doca_dev_close(dev), "failed to close dev");
+        docacxx::check_derr(doca_dev_close(dev), "Failed to close dev");
     });
 
     // create compressor
@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
     } else if (algorithm == "deflate") {
         compressor = std::make_unique<DeflateCompressor>(dev, decompress_task_slot_num);
     } else {
-        std::cerr << "Unsupported algorithm" << std::endl;
+        std::cerr << "Unsupported compress algorithm" << std::endl;
         exit(EXIT_FAILURE); 
     }
 
