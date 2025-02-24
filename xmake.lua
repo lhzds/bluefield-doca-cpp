@@ -1,3 +1,4 @@
+set_version("1.0.0")
 add_rules("mode.debug", "mode.release")
 set_languages("c++20")
 
@@ -17,5 +18,7 @@ target("docacxx")
     set_kind("static")
     add_files("src/*.cpp")
     add_packages("doca-common", "doca-comch", "doca-compress", "doca-ec", "doca-dma-lib", {public = true})
+    add_rules("utils.install.cmake_importfiles")
+    add_rules("utils.install.pkgconfig_importfiles")
 
 -- includes("bench/xmake.lua")

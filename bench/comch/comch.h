@@ -16,7 +16,7 @@ public:
         docacxx::Mmap &mmap, doca_dev *dev, size_t post_recv_task_slot_num): m_post_recv_ctx(post_recv_task_slot_num) {
         docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
         docacxx::comch::Consumer::Cfg cfg;
-        cfg.m_post_recv_task_slot_num = post_recv_task_slot_num;
+        cfg.post_recv_task_slot_num = post_recv_task_slot_num;
         m_inner = std::make_unique<docacxx::comch::Consumer>(peer_conn, m_pe,
             conn_pe, mmap, dev, cfg);
         m_inner->set_post_recv_cb(m_post_recv_ctx.make_pipeline_submitter());
@@ -58,7 +58,7 @@ public:
         :m_send_ctx(send_task_slot_num), m_consumer_id{consumer_id} {
         docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
         docacxx::comch::Producer::Cfg cfg;
-        cfg.m_send_task_slot_num = send_task_slot_num;
+        cfg.send_task_slot_num = send_task_slot_num;
         m_inner = std::make_unique<docacxx::comch::Producer>(peer_conn, m_pe, dev, cfg);
         m_inner->set_send_cb(m_send_ctx.make_pipeline_submitter());
         m_inner->start_sync();

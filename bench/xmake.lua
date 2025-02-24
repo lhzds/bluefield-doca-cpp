@@ -1,24 +1,25 @@
 add_requires("nlohmann_json", {alias = "json", private = true})
-add_requires("lz4", "isal", "argparse", {private = true})
+add_requires("argparse", {private = true})
+add_packages("json", "argparse")
 
 add_includedirs("util")
 add_deps("docacxx")
-add_packages("json", "argparse")
 
-target("compress_bench")
-    set_kind("binary")
-    add_files("compress/*.cpp")
-    add_packages("lz4", "isal")
+-- add_requires("lz4", "isal")
+-- target("bench_compress")
+--     set_kind("binary")
+--     add_files("compress/*.cpp")
+--     add_packages("lz4", "isal")
 
-target("ec_bench")
+target("bench_ec")
     set_kind("binary")
     add_files("ec/*.cpp")
 
-target("comch_bench_host")
+target("bench_comch_host")
     set_kind("binary")
-    add_files("comch/comch_bench_host.cpp")
+    add_files("comch/host.cpp")
 
-target("comch_bench_dpu")
+target("bench_comch_dpu")
     set_kind("binary")
-    add_files("comch/comch_bench_dpu.cpp")
+    add_files("comch/dpu.cpp")
     

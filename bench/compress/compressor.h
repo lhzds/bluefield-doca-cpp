@@ -40,7 +40,7 @@ public:
         docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
 
         docacxx::Compress::Cfg cfg;
-        cfg.m_lz4_block_decompress_task_slot_num = decompress_task_slot_num;
+        cfg.lz4_block_decompress_task_slot_num = decompress_task_slot_num;
 
         m_decompressor = std::make_unique<docacxx::Compress>(m_pe, dev, cfg);
         m_decompressor->set_lz4_block_decompress_cb(m_decompress_ctx.make_pipeline_submitter());
@@ -82,7 +82,7 @@ public:
         docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
 
         docacxx::Compress::Cfg cfg;
-        cfg.m_deflate_decompress_task_slot_num = decompress_task_slot_num;
+        cfg.deflate_decompress_task_slot_num = decompress_task_slot_num;
 
         m_decompressor = std::make_unique<docacxx::Compress>(m_pe, dev, cfg);
         m_decompressor->set_deflate_decompress_cb(m_decompress_ctx.make_pipeline_submitter());

@@ -2,8 +2,8 @@ import os
 import subprocess
 from tqdm import tqdm
 
-host_exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/comch_bench_host")
-dpu_exe = os.path.expanduser("~/docacxx/build/linux/arm64-v8a/release/comch_bench_dpu")
+host_exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/bench_comch_host")
+dpu_exe = os.path.expanduser("~/docacxx/build/linux/arm64-v8a/release/bench_comch_dpu")
 
 output_dir = os.path.expanduser("~/docacxx/bench_result/comch")
 if not os.path.exists(output_dir):

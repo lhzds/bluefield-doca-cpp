@@ -2,7 +2,7 @@ import os
 import subprocess
 from tqdm import tqdm
 
-exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/compress_bench")
+exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/bench_compress")
 input_file =os.path.expanduser("~/workload/linux-5.10.100.tar")
 output_dir = os.path.expanduser("~/docacxx/bench_result/comp")
 if not os.path.exists(output_dir):

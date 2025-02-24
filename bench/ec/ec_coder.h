@@ -13,8 +13,8 @@ public:
         : m_create_ctx(create_task_slot_num), m_recover_ctx(recover_task_slot_num) {
         docacxx::check_derr(doca_pe_create(&m_pe), "Failed to create pe");
         docacxx::Ec::Cfg cfg;
-        cfg.m_create_task_slot_num = create_task_slot_num;
-        cfg.m_recover_task_slot_num = recover_task_slot_num;
+        cfg.create_task_slot_num = create_task_slot_num;
+        cfg.recover_task_slot_num = recover_task_slot_num;
         m_inner = std::make_unique<docacxx::Ec>(m_pe, dev, cfg);
         m_inner->set_create_cb(m_create_ctx.make_pipeline_submitter());
         m_inner->set_recover_cb(m_recover_ctx.make_pipeline_submitter());
