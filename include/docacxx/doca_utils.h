@@ -42,7 +42,7 @@ open_doca_device_with_pci(const char *pci_addr, struct doca_dev **retval) {
     if (res != DOCA_SUCCESS) { return res; }
 
     /* Search */
-    for (int i = 0; i < nb_devs; i++) {
+    for (uint32_t i = 0; i < nb_devs; i++) {
         res = doca_devinfo_is_equal_pci_addr(
             dev_list[i], pci_addr, &is_addr_equal);
         if (res == DOCA_SUCCESS && is_addr_equal) {
@@ -77,7 +77,7 @@ static inline doca_error_t open_doca_device_rep_with_pci(
         doca_devinfo_rep_create_list(local, filter, &rep_dev_list, &nb_rdevs);
     if (result != DOCA_SUCCESS) { return DOCA_ERROR_INVALID_VALUE; }
 
-    for (int i = 0; i < nb_rdevs; i++) {
+    for (uint32_t i = 0; i < nb_rdevs; i++) {
         result = doca_devinfo_rep_is_equal_pci_addr(
             rep_dev_list[i], pci_addr, &is_addr_equal);
         if (result == DOCA_SUCCESS && is_addr_equal
