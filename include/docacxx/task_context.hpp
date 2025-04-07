@@ -31,7 +31,7 @@ public:
         return m_processing_task_cnt;
     }
 
-    Task::ContextCompleteCallback make_pipeline_submitter() {
+    typename Task::ContextCompleteCallback make_pipeline_submitter() {
         return [&](std::unique_ptr<Task> completed_task) {
             completed_task.reset(); // 提前释放刚完成的 task
 
