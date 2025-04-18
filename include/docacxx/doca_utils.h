@@ -10,12 +10,14 @@
 #include <doca_dev.h>
 #include <doca_mmap.h>
 #include <fmt/core.h>
+#include <iostream>
 #include <stdexcept>
 
 namespace docacxx {
 template<class... Args>
 static inline void throw_with(std::string_view format, Args... args) {
-    throw std::runtime_error(fmt::format(fmt::runtime(format), args...));
+    auto msg = fmt::format(fmt::runtime(format), args...);
+    throw std::runtime_error(msg);
 }
 
 static inline void check_derr(

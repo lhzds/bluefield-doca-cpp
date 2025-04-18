@@ -47,8 +47,6 @@ public:
             return doca_compress_task_decompress_lz4_block_as_task(m_inner);
         } else if constexpr (std::is_same_v<RawDocaTask, doca_compress_task_decompress_deflate>) {
             return doca_compress_task_decompress_deflate_as_task(m_inner);
-        } else if constexpr (std::is_same_v<RawDocaTask, doca_dma_task_memcpy>) {
-            return doca_dma_task_memcpy_as_task(m_inner);
         } else if constexpr (std::is_same_v<RawDocaTask, doca_ec_task_update>) {
             return doca_ec_task_update_as_task(m_inner);
         } else if constexpr (std::is_same_v<RawDocaTask, doca_ec_task_create>) {
@@ -84,6 +82,62 @@ private:
 };
 
 template<>
+class Task<doca_dma_task_memcpy>: public Noncopyable {
+public:
+    using CompleteCallback = std::function<void(const Task &)>;
+    // 使用 std::unique_ptr，离开作用域自动析构
+    using ContextCompleteCallback = std::function<void(std::unique_ptr<Task>)>;
+
+    Task(doca_dma_task_memcpy *inner, const Buffer *src, Buffer *dst, CompleteCallback cb):
+        m_inner(inner), m_cb(std::move(cb)), m_src(src), m_dst(dst) {
+        doca_data task_data;
+        task_data.ptr = this;
+        doca_task_set_user_data(raw_base(), task_data);
+    };
+    ~Task() { 
+        if (m_inner) {
+            doca_task_free(raw_base());
+        }
+    }
+
+    doca_dma_task_memcpy *raw() const {
+        return m_inner;
+    }
+
+    doca_task *raw_base() const {
+        return doca_dma_task_memcpy_as_task(m_inner);
+    }
+
+    doca_error_t status() const {
+        return doca_task_get_status(raw_base());
+    }
+
+    void set_cb(CompleteCallback cb) {
+        m_cb = std::move(cb);
+    }
+
+    void call_cb() {
+        if (m_cb) {
+            m_cb(*this);
+        }
+    }
+
+    const Buffer *src() const {
+        return m_src;
+    }
+
+    Buffer *dst() const {
+        return m_dst;
+    }
+
+private:
+    doca_dma_task_memcpy *m_inner{};
+    CompleteCallback m_cb{};
+    const Buffer *m_src;
+    Buffer *m_dst;
+};
+
+template<>
 class Task<doca_comch_consumer_task_post_recv>: public Noncopyable {
 public:
     using CompleteCallback = std::function<void(const Task &)>;
@@ -108,6 +162,10 @@ public:
 
     doca_task *raw_base() const {
         return doca_comch_consumer_task_post_recv_as_task(m_inner);
+    }
+
+    doca_error_t status() const {
+        return doca_task_get_status(raw_base());
     }
 
     void set_cb(CompleteCallback cb) {
