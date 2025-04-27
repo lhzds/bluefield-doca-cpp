@@ -2,10 +2,13 @@ import os
 import subprocess
 from tqdm import tqdm
 
-host_exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/bench_comch_host")
-dpu_exe = os.path.expanduser("~/docacxx/build/linux/arm64-v8a/release/bench_comch_dpu")
+script_path = os.path.abspath(__file__)
+proj_dir = os.path.dirname(os.path.dirname(os.path.dirname(script_path)))
 
-output_dir = os.path.expanduser("~/docacxx/bench_result/comch")
+host_exe = os.path.expanduser(os.path.join(proj_dir, "build/linux/x86_64/release/bench_comch_host"))
+dpu_exe = os.path.expanduser(os.path.join(proj_dir, "build/linux/arm64-v8a/release/bench_comch_dpu"))
+
+output_dir = os.path.expanduser(os.path.join(proj_dir, "bench_result/comch"))
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 

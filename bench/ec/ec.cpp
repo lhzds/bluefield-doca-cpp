@@ -1,4 +1,5 @@
 #include <argparse/argparse.hpp>
+#include <cstdint>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -146,28 +147,53 @@ int main(int argc, char **argv) {
     }
 
     // ec recover bench
-    size_t intact_block_count = data_block_count - rdnc_block_count;
-    std::vector<uint32_t> missing_indices;
-    for (uint32_t i{}; i < rdnc_block_count; ++i) {
-        missing_indices.emplace_back(i + intact_block_count);
+    std::set<uint32_t> missing_set;
+    while (missing_set.size() < rdnc_block_count) {
+        missing_set.emplace(random() % data_block_count);
     }
+    std::vector<uint32_t> missing_indices(missing_set.begin(), missing_set.end());
 
-    docacxx::BufInventoryWithMmap available_buf_inv(dev,
+    std::cout << "Missing indices: ";
+    for (auto index : missing_set) {
+        std::cout << index << " ";
+    }
+    std::cout << std::endl;
+
+    docacxx::BufInventoryWithMmap avail_buf_inv(dev,
         recover_task_slot_num * (data_block_count * block_size), recover_task_slot_num);
     docacxx::BufInventoryWithMmap recovered_buf_inv(dev,
         recover_task_slot_num * (rdnc_block_count * block_size), recover_task_slot_num);
     
-    std::vector<std::unique_ptr<docacxx::Buffer>> available_bufs;
-    available_bufs.reserve(recover_task_slot_num);
+    std::vector<std::unique_ptr<docacxx::Buffer>> avail_bufs;
+    avail_bufs.reserve(recover_task_slot_num);
+    std::vector<std::vector<char>> test_data;
+    test_data.reserve(recover_task_slot_num);
+
     for (size_t i{}; i < recover_task_slot_num; ++i) {
-        size_t buf_len = data_block_count * block_size;
-        available_bufs.emplace_back(available_buf_inv.get_buf(i * buf_len, buf_len));
-        auto &buf = available_bufs.back();
+        test_data.emplace_back(std::vector<char>(rdnc_block_count * block_size));
+
+        size_t avail_buf_len = data_block_count * block_size;
+        avail_bufs.emplace_back(avail_buf_inv.get_buf(i * avail_buf_len, avail_buf_len));
+        avail_bufs[i]->set_doca_buf_data(avail_buf_len);
         
-        std::memcpy(buf->data(), src_bufs[i]->data(), intact_block_count * block_size);
-        std::memcpy(buf->data() + intact_block_count * block_size,
-            dst_bufs[i]->data(), rdnc_block_count * block_size);
-        buf->set_doca_buf_data(buf_len);
+        size_t test_blocks{}, avail_blocks{};
+        for (size_t j{}; j < total_block_count; ++j) {
+            if (missing_set.count(j)) {
+                std::memcpy(
+                    test_data[i].data() + test_blocks * block_size,
+                    src_bufs[i]->data() + j * block_size,
+                    block_size
+                );
+                ++test_blocks;         
+            } else {
+                std::memcpy(
+                    avail_bufs[i]->data() + avail_blocks * block_size,
+                    src_bufs[i]->data() + j * block_size,
+                    block_size
+                );
+                ++avail_blocks;
+            }
+        }
     }
 
     std::vector<std::unique_ptr<docacxx::Buffer>> recovered_bufs;
@@ -178,14 +204,14 @@ int main(int argc, char **argv) {
     }
 
     auto recover_time = clock([&] {
-        coder.recover(available_bufs, recovered_bufs, missing_indices);
+        coder.recover(avail_bufs, recovered_bufs, missing_indices);
     });
     for (size_t i{1}; i < repeat_time; ++i) {
         for (auto &recovered_buf : recovered_bufs) {
             recovered_buf->clear_doca_buf_data();
         }
         recover_time += clock([&] {
-        coder.recover(available_bufs, recovered_bufs, missing_indices);
+        coder.recover(avail_bufs, recovered_bufs, missing_indices);
     });
     }
 
@@ -193,8 +219,7 @@ int main(int argc, char **argv) {
     for (size_t i{}; i < recover_task_slot_num; ++i) {
         auto doca_buf_data = recovered_bufs[i]->get_doca_buf_data();
         std::string_view a(doca_buf_data.first, doca_buf_data.second);
-        std::string_view b(src_bufs[i]->data() + intact_block_count * block_size,
-            rdnc_block_count * block_size);
+        std::string_view b(test_data[i].data(), test_data[i].size());
         if (a != b) {
             std::cerr << "Failed to recover" << std::endl;
             exit(EXIT_FAILURE);

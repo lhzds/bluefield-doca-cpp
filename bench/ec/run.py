@@ -2,13 +2,19 @@ import os
 import subprocess
 from tqdm import tqdm
 
-exe = os.path.expanduser("~/repos/docacxx/build/linux/x86_64/release/bench_ec")
-output_dir = os.path.expanduser("~/docacxx/bench_result/ec")
+script_path = os.path.abspath(__file__)
+proj_dir = os.path.dirname(os.path.dirname(os.path.dirname(script_path)))
+
+exe = os.path.expanduser(os.path.join(proj_dir, "build/linux/x86_64/release/bench_ec"))
+output_dir = os.path.expanduser(os.path.join(proj_dir, "bench_result/ec"))
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
+print(exe)
+print(output_dir)
+
 # dev_pci
-dev_pci = "cb:00.0"
+dev_pci = "b1:00.0"
 
 # data blocks/redundant blocks
 drs = [(4, 2), (6, 3), (8, 3)]
